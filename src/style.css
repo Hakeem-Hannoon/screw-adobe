@@ -286,7 +286,49 @@ button {
   align-items: center;
   flex-wrap: wrap;
   gap: 14px 18px;
+  margin-bottom: 24px;
+}
+
+.more-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 40px;
+}
+
+.tool-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tool-link:hover {
+  border-color: var(--graphite);
+  background: var(--hover);
+}
+
+.tool-link svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--graphite);
+}
+
+.tool-link strong {
+  display: block;
+  font-weight: 620;
+}
+
+.tool-link small {
+  display: block;
+  color: var(--graphite);
+  font-size: var(--fs-sm);
 }
 
 .hint {

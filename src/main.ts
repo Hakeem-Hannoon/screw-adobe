@@ -8,6 +8,8 @@ import { PRESETS, TextIndex, covers, queryPattern, type Match, type Preset } fro
 import { exportPdf } from "./export";
 import { icons } from "./icons";
 import { askPassword, baseName, isPdf, saveFile, showBusy, toast } from "./ui";
+import { MergeTool } from "./merge";
+import { SplitTool } from "./split";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
 
 // ------------------------------------------------------------------ markup
@@ -25,7 +27,11 @@ app.innerHTML = `
       <button type="button" class="btn primary lg" id="choose">${icons.file}<span>Choose a PDF</span></button>
       <span class="hint">or drop one anywhere on this page</span>
     </div>
-    <p class="privacy">Your file never leaves this device. Nothing is uploaded, and there's no server to upload to.</p>
+    <div class="more-tools" role="group" aria-label="Other tools">
+      <button type="button" class="tool-link" id="go-merge">${icons.merge}<span><strong>Merge PDFs</strong><small>Combine several files into one</small></span></button>
+      <button type="button" class="tool-link" id="go-split">${icons.scissors}<span><strong>Split a PDF</strong><small>Cut one file into smaller ones</small></span></button>
+    </div>
+    <p class="privacy">Your files never leave this device. Nothing is uploaded, and there's no server to upload to.</p>
   </div>
   <input type="file" id="file-input" accept="application/pdf,.pdf" hidden />
 </main>
@@ -97,7 +103,7 @@ app.innerHTML = `
   <div class="scroller" id="scroller"></div>
 </div>
 
-<div class="dropzone" id="dropzone" hidden><p>Drop your PDF to open it</p></div>
+<div class="dropzone" id="dropzone" hidden><p id="drop-text">Drop your PDF to open it</p></div>
 <div class="busy" id="busy" hidden><p id="busy-text">Working</p></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
@@ -133,6 +139,7 @@ const menu = $("#download-menu");
 const menuToggle = $<HTMLButtonElement>("#menu-toggle");
 const flattenAll = $<HTMLInputElement>("#flatten-all");
 const dropzone = $("#dropzone");
+const dropText = $("#drop-text");
 
 // ------------------------------------------------------------------- state
 
@@ -155,6 +162,12 @@ let savedRevision = 0;
 let findMatches: Match[] = [];
 let findCursor = -1;
 let activePreset: Preset | null = null;
+
+type Mode = "home" | "editor" | "merge" | "split";
+let mode: Mode = "home";
+const HOME_TITLE = "screw adobe: black out anything in a PDF";
+const merge = new MergeTool(app, { goHome });
+const split = new SplitTool(app, { goHome });
 
 // ----------------------------------------------------------------- helpers
 
@@ -197,8 +210,7 @@ async function openFile(file: File): Promise<void> {
     store.reset();
     savedRevision = store.revision;
 
-    home.hidden = true;
-    editor.hidden = false;
+    setMode("editor");
     filenameEl.textContent = file.name;
     filenameEl.title = file.name;
     document.title = `${file.name} - screw adobe`;
@@ -227,11 +239,36 @@ function closeFile(force = false): void {
   current = null;
   store.reset();
   closeFind();
-  if (!force) {
-    editor.hidden = true;
-    home.hidden = false;
-    document.title = "screw adobe: black out anything in a PDF";
-  }
+  if (!force) setMode("home");
+}
+
+// ------------------------------------------------------------- views / tools
+
+function setMode(next: Mode): void {
+  mode = next;
+  home.hidden = next !== "home";
+  editor.hidden = next !== "editor";
+  merge.root.hidden = next !== "merge";
+  split.root.hidden = next !== "split";
+  if (next === "home") document.title = HOME_TITLE;
+}
+
+function goHome(): void {
+  merge.close();
+  split.close();
+  setMode("home");
+}
+
+/** Switch to Merge or Split. With no files, opens the file picker (call from a click). */
+function startTool(tool: "merge" | "split", files?: File[]): void {
+  if (unsaved() && !window.confirm(`Discard your changes to ${current!.name}?`)) return;
+  closeFile(true);
+  const t = tool === "merge" ? merge : split;
+  t.open();
+  setMode(tool);
+  if (!files) t.pick();
+  else if (tool === "merge") void merge.add(files);
+  else void split.load(files[0]);
 }
 
 // ----------------------------------------------------------------- toolbar
@@ -465,6 +502,8 @@ fileInput.addEventListener("change", () => {
   if (f) void openFile(f);
 });
 $("#close-file").addEventListener("click", () => closeFile());
+$("#go-merge").addEventListener("click", () => startTool("merge"));
+$("#go-split").addEventListener("click", () => startTool("split"));
 document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((b) =>
   b.addEventListener("click", () => setTool(b.dataset.tool as Tool)),
 );
@@ -494,9 +533,16 @@ function isTyping(t: EventTarget | null): boolean {
 }
 
 document.addEventListener("keydown", (e) => {
-  if (!current || !viewer || pwDialog.open) return;
+  if (pwDialog.open) return;
   const mod = e.metaKey || e.ctrlKey;
   const key = e.key.toLowerCase();
+
+  if ((mode === "merge" || mode === "split") && mod && key === "s") {
+    e.preventDefault();
+    void (mode === "merge" ? merge.download() : split.download());
+    return;
+  }
+  if (!current || !viewer) return;
 
   if (mod && key === "f") {
     e.preventDefault();
@@ -564,6 +610,15 @@ window.addEventListener("dragenter", (e) => {
   if (!hasFiles(e)) return;
   e.preventDefault();
   dragDepth += 1;
+  const many = (e.dataTransfer?.items.length ?? 0) > 1;
+  dropText.textContent =
+    mode === "merge"
+      ? "Drop PDFs to add them"
+      : mode === "split"
+        ? "Drop a PDF to split it"
+        : many
+          ? "Drop to merge these PDFs"
+          : "Drop your PDF to open it";
   dropzone.hidden = false;
 });
 window.addEventListener("dragover", (e) => {
@@ -580,8 +635,12 @@ window.addEventListener("drop", (e) => {
   e.preventDefault();
   dragDepth = 0;
   dropzone.hidden = true;
-  const f = e.dataTransfer?.files?.[0];
-  if (f) void openFile(f);
+  const files = Array.from(e.dataTransfer?.files ?? []);
+  if (!files.length) return;
+  if (mode === "merge") void merge.add(files);
+  else if (mode === "split") void split.load(files.find(isPdf) ?? files[0]);
+  else if (files.filter(isPdf).length > 1) startTool("merge", files);
+  else void openFile(files.find(isPdf) ?? files[0]);
 });
 
 window.addEventListener("beforeunload", (e) => {
