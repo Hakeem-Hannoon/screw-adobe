@@ -3,6 +3,7 @@
 import * as pdfjs from "pdfjs-dist/legacy/build/pdf.mjs";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
+import type { PageSize } from "./types";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -43,4 +44,20 @@ export function openPdf(
   };
 
   return task.promise.then((doc) => ({ doc, password }));
+}
+
+/** True when opening failed because the person cancelled the password prompt. */
+export function isCancelled(err: unknown): boolean {
+  return !(err instanceof pdfjs.InvalidPDFException) && /destroy|abort|cancel/i.test(String(err));
+}
+
+/** Every page's on-screen size in points (rotation applied). */
+export async function pageSizes(doc: PDFDocumentProxy): Promise<PageSize[]> {
+  const sizes: PageSize[] = [];
+  for (let i = 1; i <= doc.numPages; i++) {
+    const page = await doc.getPage(i);
+    const vp = page.getViewport({ scale: 1 });
+    sizes.push({ w: vp.width, h: vp.height });
+  }
+  return sizes;
 }

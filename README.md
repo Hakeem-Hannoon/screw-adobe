@@ -1,6 +1,6 @@
 # screw adobe
 
-Black out or white out anything in a PDF, then download a clean copy. Runs entirely in your browser: your file is never uploaded anywhere.
+Black out or white out anything in a PDF, then download a clean copy. Merge and split PDFs too. Runs entirely in your browser: your files are never uploaded anywhere.
 
 **Live:** https://hakeem-hannoon.github.io/screw-adobe/
 
@@ -12,6 +12,8 @@ Black out or white out anything in a PDF, then download a clean copy. Runs entir
 - **Delete pages** you don't want to share.
 - **Undo / redo**, zoom, keyboard shortcuts, dark mode, works on phones.
 - **Password-protected PDFs** open after you enter the password.
+- **Merge PDFs:** add several files, drag them into order, download one PDF. Drop two or more PDFs on the page to start a merge.
+- **Split a PDF:** click between pages to cut, or cut every N pages. Untick any part you don't want. One part downloads as a PDF; several come as a ZIP.
 
 ## Why the redaction is real
 
@@ -26,6 +28,10 @@ When you download:
 Want the strongest option? Open the arrow next to **Download** and turn on **Flatten every page**. No text in the output will be selectable.
 
 Password-protected files are always fully flattened, and the downloaded copy has no password.
+
+### Merging and splitting
+
+Merged and split files are built the same way as untouched pages above: brand-new PDFs with no metadata, bookmarks, attachments or scripts, and with links between pages removed (web links stay). That matters for splitting: a page that links to page 10 would otherwise drag page 10 into a file you meant to contain only pages 1 to 3. Pages from password-protected files are turned into images.
 
 ## Privacy
 
@@ -43,7 +49,7 @@ There's no backend. The production build ships a Content-Security-Policy with `c
 | `Ctrl/⌘ Z`, `Ctrl/⌘ Shift Z` | Undo, redo |
 | `Ctrl/⌘ F` | Find text to cover |
 | `Ctrl/⌘ +`, `-`, `0` | Zoom in, out, fit width |
-| `Ctrl/⌘ S` | Download |
+| `Ctrl/⌘ S` | Download (also in Merge and Split) |
 
 ## Develop
 

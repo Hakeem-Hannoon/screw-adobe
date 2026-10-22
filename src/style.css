@@ -286,7 +286,49 @@ button {
   align-items: center;
   flex-wrap: wrap;
   gap: 14px 18px;
+  margin-bottom: 24px;
+}
+
+.more-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
   margin-bottom: 40px;
+}
+
+.tool-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px 10px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.tool-link:hover {
+  border-color: var(--graphite);
+  background: var(--hover);
+}
+
+.tool-link svg {
+  flex: none;
+  width: 20px;
+  height: 20px;
+  color: var(--graphite);
+}
+
+.tool-link strong {
+  display: block;
+  font-weight: 620;
+}
+
+.tool-link small {
+  display: block;
+  color: var(--graphite);
+  font-size: var(--fs-sm);
 }
 
 .hint {
@@ -305,7 +347,8 @@ button {
 
 /* -------------------------------------------------------------- editor */
 
-.editor {
+.editor,
+.workspace {
   position: fixed;
   inset: 0;
   display: flex;
@@ -849,6 +892,378 @@ button {
 
 .selected:not(.editing) .shape-delete {
   display: inline-flex;
+}
+
+/* ---------------------------------------------------- merge / split tools */
+
+.tool-body {
+  width: min(680px, 100%);
+  margin: 0 auto;
+  padding: 36px 24px 96px;
+}
+
+.tool-title {
+  margin: 0 0 6px;
+  font-size: 28px;
+  font-weight: 760;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.tool-sub {
+  margin: 0 0 22px;
+  color: var(--graphite);
+  font-size: 15px;
+}
+
+.drop-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px dashed var(--rule);
+  border-radius: 12px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.drop-card:hover {
+  border-color: var(--graphite);
+  background: var(--hover);
+}
+
+.drop-card svg {
+  flex: none;
+  color: var(--graphite);
+}
+
+.drop-card strong {
+  display: block;
+  font-weight: 620;
+}
+
+.drop-card small {
+  display: block;
+  color: var(--graphite);
+  font-size: var(--fs-sm);
+}
+
+.drop-card.lg {
+  padding: 40px 24px;
+  justify-content: center;
+}
+
+.drop-card.lg strong {
+  font-size: 16px;
+}
+
+@media (hover: none) {
+  .drop-card small {
+    display: none;
+  }
+}
+
+.thumb-sheet {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  flex: none;
+}
+
+.thumb-sheet canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* merge */
+
+.file-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-list:empty {
+  display: none;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 4px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.file-row.lifted {
+  position: relative;
+  z-index: 2;
+  border-color: var(--marquee);
+  box-shadow: 0 10px 28px rgba(20, 24, 32, 0.18);
+}
+
+.grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--graphite);
+  cursor: grab;
+  touch-action: none;
+  flex: none;
+}
+
+.grip:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.lifted .grip {
+  cursor: grabbing;
+}
+
+.row-thumb {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 56px;
+  flex: none;
+}
+
+.row-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 560;
+}
+
+.row-meta {
+  color: var(--graphite);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+/* split */
+
+.opt-hint {
+  margin: 0;
+  color: var(--graphite);
+  font-size: var(--fs-sm);
+  flex: 1 1 260px;
+}
+
+.every {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: var(--fs-sm);
+  color: var(--graphite);
+}
+
+.every input {
+  width: 56px;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+}
+
+.every input:focus {
+  outline: none;
+  border-color: var(--marquee);
+  box-shadow: 0 0 0 3px var(--marquee-soft);
+}
+
+.parts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 24px 24px 96px;
+}
+
+.part {
+  max-width: 100%;
+  padding: 10px 12px 12px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--chrome);
+}
+
+.part-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 28px;
+  margin-bottom: 8px;
+}
+
+.part-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.part-check input {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--marquee);
+}
+
+.part-check strong {
+  font-weight: 650;
+}
+
+.part-range {
+  color: var(--graphite);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.part-pages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.pthumb {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.pthumb-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 96px;
+  height: 124px;
+}
+
+.pthumb figcaption {
+  color: var(--graphite);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.cut {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 124px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--graphite);
+  cursor: pointer;
+}
+
+.cut::before {
+  content: "";
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 50%;
+  border-left: 1.5px dashed currentColor;
+  opacity: 0;
+}
+
+.cut svg {
+  position: relative;
+  width: 16px;
+  height: 16px;
+  padding: 2px;
+  box-sizing: content-box;
+  border-radius: 50%;
+  background: var(--chrome);
+  opacity: 0;
+  transform: rotate(-90deg);
+}
+
+.cut:hover,
+.cut:focus-visible {
+  color: var(--marquee);
+}
+
+.cut:hover::before,
+.cut:focus-visible::before {
+  opacity: 0.9;
+}
+
+.part-pages:hover .cut svg {
+  opacity: 0.45;
+}
+
+.part-pages .cut:hover svg,
+.cut:focus-visible svg {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .cut svg {
+    opacity: 0.7;
+  }
+}
+
+.part.skipped {
+  background: transparent;
+  border-style: dashed;
+}
+
+.part.skipped .part-pages,
+.part.skipped .part-range {
+  opacity: 0.4;
+}
+
+@media (max-width: 520px) {
+  .parts {
+    padding: 16px 12px 96px;
+  }
+  .pthumb-box {
+    width: 72px;
+    height: 94px;
+  }
+  .cut {
+    height: 94px;
+    width: 24px;
+  }
+  .tool-body {
+    padding: 24px 16px 96px;
+  }
 }
 
 /* ----------------------------------------------------------- overlays */

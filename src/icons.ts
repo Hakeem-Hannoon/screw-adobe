@@ -16,4 +16,12 @@ export const icons = {
   download: svg('<path d="M12 4v11M7 10l5 5 5-5M5 20h14"/>'),
   chevron: svg('<path d="m6 9 6 6 6-6"/>'),
   file: svg('<path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7z"/><path d="M14 3v4h4"/>'),
+  merge: svg('<path d="M6 3v4a5 5 0 0 0 5 5h2a5 5 0 0 0 5-5V3"/><path d="M12 12v9M8.5 17.5 12 21l3.5-3.5"/>'),
+  scissors: svg(
+    '<circle cx="6" cy="6.5" r="2.75"/><circle cx="6" cy="17.5" r="2.75"/><path d="M8.3 8.1 20 18M8.3 15.9 20 6"/>',
+  ),
+  grip: svg(
+    '<circle cx="9" cy="6" r="1.4"/><circle cx="15" cy="6" r="1.4"/><circle cx="9" cy="12" r="1.4"/><circle cx="15" cy="12" r="1.4"/><circle cx="9" cy="18" r="1.4"/><circle cx="15" cy="18" r="1.4"/>',
+    true,
+  ),
 };

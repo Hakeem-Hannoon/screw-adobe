@@ -97,7 +97,7 @@ export async function exportPdf(opts: ExportOptions): Promise<ExportResult> {
   return { bytes: saved, pages: order.length, flattened: flatten.size, forcedFlatten };
 }
 
-async function rasterize(
+export async function rasterize(
   doc: PDFDocumentProxy,
   index: number,
   size: PageSize,
@@ -158,7 +158,7 @@ async function rasterize(
 const N = (name: string) => PDFName.of(name);
 
 /** Cut references from a page that would drag other pages (or private data) into the copy. */
-function sanitizePage(node: PDFDict): void {
+export function sanitizePage(node: PDFDict): void {
   for (const key of ["B", "Metadata", "PieceInfo", "AA"]) node.delete(N(key));
   const annots = node.lookup(N("Annots"));
   if (!(annots instanceof PDFArray)) return;
@@ -177,7 +177,7 @@ function sanitizePage(node: PDFDict): void {
 }
 
 /** Remove every indirect object not reachable from the document catalog. */
-function collectGarbage(doc: PDFDocument): void {
+export function collectGarbage(doc: PDFDocument): void {
   const ctx = doc.context;
   const reachable = new Set<string>();
   const stack: PDFObject[] = [];

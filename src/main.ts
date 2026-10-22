@@ -1,12 +1,15 @@
 import "@fontsource-variable/public-sans/wght.css";
 import "./style.css";
 import type { PDFDocumentProxy } from "pdfjs-dist";
-import { openPdf, pdfjs } from "./pdf";
+import { isCancelled, openPdf, pageSizes } from "./pdf";
 import { Store } from "./store";
 import { ACTUAL_SIZE, Viewer, type ViewerSettings } from "./viewer";
 import { PRESETS, TextIndex, covers, queryPattern, type Match, type Preset } from "./find";
 import { exportPdf } from "./export";
 import { icons } from "./icons";
+import { askPassword, baseName, isPdf, saveFile, showBusy, toast } from "./ui";
+import { MergeTool } from "./merge";
+import { SplitTool } from "./split";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
 
 // ------------------------------------------------------------------ markup
@@ -24,7 +27,11 @@ app.innerHTML = `
       <button type="button" class="btn primary lg" id="choose">${icons.file}<span>Choose a PDF</span></button>
       <span class="hint">or drop one anywhere on this page</span>
     </div>
-    <p class="privacy">Your file never leaves this device. Nothing is uploaded, and there's no server to upload to.</p>
+    <div class="more-tools" role="group" aria-label="Other tools">
+      <button type="button" class="tool-link" id="go-merge">${icons.merge}<span><strong>Merge PDFs</strong><small>Combine several files into one</small></span></button>
+      <button type="button" class="tool-link" id="go-split">${icons.scissors}<span><strong>Split a PDF</strong><small>Cut one file into smaller ones</small></span></button>
+    </div>
+    <p class="privacy">Your files never leave this device. Nothing is uploaded, and there's no server to upload to.</p>
   </div>
   <input type="file" id="file-input" accept="application/pdf,.pdf" hidden />
 </main>
@@ -96,7 +103,7 @@ app.innerHTML = `
   <div class="scroller" id="scroller"></div>
 </div>
 
-<div class="dropzone" id="dropzone" hidden><p>Drop your PDF to open it</p></div>
+<div class="dropzone" id="dropzone" hidden><p id="drop-text">Drop your PDF to open it</p></div>
 <div class="busy" id="busy" hidden><p id="busy-text">Working</p></div>
 <div class="toasts" id="toasts" aria-live="polite"></div>
 
@@ -132,8 +139,7 @@ const menu = $("#download-menu");
 const menuToggle = $<HTMLButtonElement>("#menu-toggle");
 const flattenAll = $<HTMLInputElement>("#flatten-all");
 const dropzone = $("#dropzone");
-const busy = $("#busy");
-const busyText = $("#busy-text");
+const dropText = $("#drop-text");
 
 // ------------------------------------------------------------------- state
 
@@ -157,95 +163,23 @@ let findMatches: Match[] = [];
 let findCursor = -1;
 let activePreset: Preset | null = null;
 
+type Mode = "home" | "editor" | "merge" | "split";
+let mode: Mode = "home";
+const HOME_TITLE = "screw adobe: black out anything in a PDF";
+const merge = new MergeTool(app, { goHome });
+const split = new SplitTool(app, { goHome });
+
 // ----------------------------------------------------------------- helpers
-
-function showBusy(text: string | null): void {
-  busy.hidden = text === null;
-  if (text !== null) busyText.textContent = text;
-}
-
-function toast(message: string, detail?: string, action?: { label: string; run: () => void }): void {
-  const box = $("#toasts");
-  box.replaceChildren(); // one message at a time
-  const el = document.createElement("div");
-  el.className = "toast";
-  const body = document.createElement("div");
-  const title = document.createElement("p");
-  title.textContent = message;
-  body.append(title);
-  if (detail) {
-    const small = document.createElement("p");
-    small.className = "toast-detail";
-    small.textContent = detail;
-    body.append(small);
-  }
-  el.append(body);
-  if (action) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.textContent = action.label;
-    b.addEventListener("click", () => {
-      action.run();
-      el.remove();
-    });
-    el.append(b);
-  }
-  box.append(el);
-  window.setTimeout(() => el.remove(), action ? 7000 : 5000);
-}
 
 const unsaved = () => current !== null && store.hasEdits && store.revision !== savedRevision;
 
 function outputName(name: string): string {
-  const base = name.replace(/\.pdf$/i, "") || "document";
-  return `${base}-redacted.pdf`;
-}
-
-function isPdf(file: File): boolean {
-  return file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+  return `${baseName(name)}-redacted.pdf`;
 }
 
 // --------------------------------------------------------------- passwords
 
 const pwDialog = $<HTMLDialogElement>("#pw-dialog");
-const pwInput = $<HTMLInputElement>("#pw-input");
-
-function askPassword(wrong: boolean): Promise<string | null> {
-  showBusy(null);
-  $("#pw-msg").textContent = wrong
-    ? "That password didn't work. Try again."
-    : "Enter it to open the file. It stays on this device.";
-  pwInput.value = "";
-  pwDialog.showModal();
-  pwInput.focus();
-  return new Promise((resolve) => {
-    const done = (value: string | null) => {
-      pwDialog.close();
-      cleanup();
-      if (value !== null) showBusy("Opening");
-      resolve(value);
-    };
-    const ok = () => done(pwInput.value);
-    const cancel = () => done(null);
-    const key = (e: KeyboardEvent) => {
-      if (e.key === "Enter") ok();
-    };
-    const esc = (e: Event) => {
-      e.preventDefault();
-      cancel();
-    };
-    const cleanup = () => {
-      $("#pw-ok").removeEventListener("click", ok);
-      $("#pw-cancel").removeEventListener("click", cancel);
-      pwInput.removeEventListener("keydown", key);
-      pwDialog.removeEventListener("cancel", esc);
-    };
-    $("#pw-ok").addEventListener("click", ok);
-    $("#pw-cancel").addEventListener("click", cancel);
-    pwInput.addEventListener("keydown", key);
-    pwDialog.addEventListener("cancel", esc);
-  });
-}
 
 // ------------------------------------------------------------ open / close
 
@@ -260,30 +194,23 @@ async function openFile(file: File): Promise<void> {
   let opened: { doc: PDFDocumentProxy };
   const bytes = new Uint8Array(await file.arrayBuffer());
   try {
-    opened = await openPdf(bytes, askPassword);
+    opened = await openPdf(bytes, (wrong) => askPassword(wrong));
   } catch (err) {
     showBusy(null);
     if (pwDialog.open) pwDialog.close();
-    const cancelled = !(err instanceof pdfjs.InvalidPDFException) && /destroy|abort|cancel/i.test(String(err));
-    if (!cancelled) toast("This PDF couldn't be opened.", "The file may be damaged or not really a PDF.");
+    if (!isCancelled(err)) toast("This PDF couldn't be opened.", "The file may be damaged or not really a PDF.");
     return;
   }
 
   try {
     const { doc } = opened;
-    const sizes: PageSize[] = [];
-    for (let i = 1; i <= doc.numPages; i++) {
-      const page = await doc.getPage(i);
-      const vp = page.getViewport({ scale: 1 });
-      sizes.push({ w: vp.width, h: vp.height });
-    }
+    const sizes = await pageSizes(doc);
     closeFile(true);
     current = { name: file.name, bytes, doc, sizes, index: new TextIndex(doc) };
     store.reset();
     savedRevision = store.revision;
 
-    home.hidden = true;
-    editor.hidden = false;
+    setMode("editor");
     filenameEl.textContent = file.name;
     filenameEl.title = file.name;
     document.title = `${file.name} - screw adobe`;
@@ -312,11 +239,36 @@ function closeFile(force = false): void {
   current = null;
   store.reset();
   closeFind();
-  if (!force) {
-    editor.hidden = true;
-    home.hidden = false;
-    document.title = "screw adobe: black out anything in a PDF";
-  }
+  if (!force) setMode("home");
+}
+
+// ------------------------------------------------------------- views / tools
+
+function setMode(next: Mode): void {
+  mode = next;
+  home.hidden = next !== "home";
+  editor.hidden = next !== "editor";
+  merge.root.hidden = next !== "merge";
+  split.root.hidden = next !== "split";
+  if (next === "home") document.title = HOME_TITLE;
+}
+
+function goHome(): void {
+  merge.close();
+  split.close();
+  setMode("home");
+}
+
+/** Switch to Merge or Split. With no files, opens the file picker (call from a click). */
+function startTool(tool: "merge" | "split", files?: File[]): void {
+  if (unsaved() && !window.confirm(`Discard your changes to ${current!.name}?`)) return;
+  closeFile(true);
+  const t = tool === "merge" ? merge : split;
+  t.open();
+  setMode(tool);
+  if (!files) t.pick();
+  else if (tool === "merge") void merge.add(files);
+  else void split.load(files[0]);
 }
 
 // ----------------------------------------------------------------- toolbar
@@ -508,15 +460,7 @@ async function download(): Promise<void> {
       flattenAll: flattenAll.checked,
       onProgress: (done, total) => showBusy(`Preparing page ${done} of ${total}`),
     });
-    const blob = new Blob([res.bytes as BlobPart], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = name;
-    document.body.append(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    saveFile(new Blob([res.bytes as BlobPart], { type: "application/pdf" }), name);
     savedRevision = store.revision;
 
     let detail: string;
@@ -558,6 +502,8 @@ fileInput.addEventListener("change", () => {
   if (f) void openFile(f);
 });
 $("#close-file").addEventListener("click", () => closeFile());
+$("#go-merge").addEventListener("click", () => startTool("merge"));
+$("#go-split").addEventListener("click", () => startTool("split"));
 document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((b) =>
   b.addEventListener("click", () => setTool(b.dataset.tool as Tool)),
 );
@@ -587,9 +533,16 @@ function isTyping(t: EventTarget | null): boolean {
 }
 
 document.addEventListener("keydown", (e) => {
-  if (!current || !viewer || pwDialog.open) return;
+  if (pwDialog.open) return;
   const mod = e.metaKey || e.ctrlKey;
   const key = e.key.toLowerCase();
+
+  if ((mode === "merge" || mode === "split") && mod && key === "s") {
+    e.preventDefault();
+    void (mode === "merge" ? merge.download() : split.download());
+    return;
+  }
+  if (!current || !viewer) return;
 
   if (mod && key === "f") {
     e.preventDefault();
@@ -657,6 +610,15 @@ window.addEventListener("dragenter", (e) => {
   if (!hasFiles(e)) return;
   e.preventDefault();
   dragDepth += 1;
+  const many = (e.dataTransfer?.items.length ?? 0) > 1;
+  dropText.textContent =
+    mode === "merge"
+      ? "Drop PDFs to add them"
+      : mode === "split"
+        ? "Drop a PDF to split it"
+        : many
+          ? "Drop to merge these PDFs"
+          : "Drop your PDF to open it";
   dropzone.hidden = false;
 });
 window.addEventListener("dragover", (e) => {
@@ -673,8 +635,12 @@ window.addEventListener("drop", (e) => {
   e.preventDefault();
   dragDepth = 0;
   dropzone.hidden = true;
-  const f = e.dataTransfer?.files?.[0];
-  if (f) void openFile(f);
+  const files = Array.from(e.dataTransfer?.files ?? []);
+  if (!files.length) return;
+  if (mode === "merge") void merge.add(files);
+  else if (mode === "split") void split.load(files.find(isPdf) ?? files[0]);
+  else if (files.filter(isPdf).length > 1) startTool("merge", files);
+  else void openFile(files.find(isPdf) ?? files[0]);
 });
 
 window.addEventListener("beforeunload", (e) => {
