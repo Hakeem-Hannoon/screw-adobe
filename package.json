@@ -1,0 +1,25 @@
+{
+  "name": "screw-adobe",
+  "private": true,
+  "version": "1.0.0",
+  "description": "A tiny, private, in-browser PDF editor for redacting (black/white boxes) and touching up PDFs.",
+  "type": "module",
+  "scripts": {
+    "predev": "node scripts/copy-pdfjs-assets.mjs",
+    "dev": "vite",
+    "prebuild": "node scripts/copy-pdfjs-assets.mjs",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@fontsource-variable/public-sans": "^5.3.0",
+    "pdf-lib": "^1.17.1",
+    "pdfjs-dist": "^6.4.299"
+  },
+  "devDependencies": {
+    "typescript": "~5.9.3",
+    "vite": "^8.3.5"
+  }
+}
