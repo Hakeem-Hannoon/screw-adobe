@@ -305,7 +305,8 @@ button {
 
 /* -------------------------------------------------------------- editor */
 
-.editor {
+.editor,
+.workspace {
   position: fixed;
   inset: 0;
   display: flex;
@@ -849,6 +850,176 @@ button {
 
 .selected:not(.editing) .shape-delete {
   display: inline-flex;
+}
+
+/* ---------------------------------------------------- merge / split tools */
+
+.tool-body {
+  width: min(680px, 100%);
+  margin: 0 auto;
+  padding: 36px 24px 96px;
+}
+
+.tool-title {
+  margin: 0 0 6px;
+  font-size: 28px;
+  font-weight: 760;
+  letter-spacing: -0.025em;
+  line-height: 1.15;
+}
+
+.tool-sub {
+  margin: 0 0 22px;
+  color: var(--graphite);
+  font-size: 15px;
+}
+
+.drop-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  border: 1.5px dashed var(--rule);
+  border-radius: 12px;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}
+
+.drop-card:hover {
+  border-color: var(--graphite);
+  background: var(--hover);
+}
+
+.drop-card svg {
+  flex: none;
+  color: var(--graphite);
+}
+
+.drop-card strong {
+  display: block;
+  font-weight: 620;
+}
+
+.drop-card small {
+  display: block;
+  color: var(--graphite);
+  font-size: var(--fs-sm);
+}
+
+.drop-card.lg {
+  padding: 40px 24px;
+  justify-content: center;
+}
+
+.drop-card.lg strong {
+  font-size: 16px;
+}
+
+@media (hover: none) {
+  .drop-card small {
+    display: none;
+  }
+}
+
+.thumb-sheet {
+  position: relative;
+  background: #fff;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  flex: none;
+}
+
+.thumb-sheet canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* merge */
+
+.file-list {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.file-list:empty {
+  display: none;
+}
+
+.file-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 8px 8px 4px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.file-row.lifted {
+  position: relative;
+  z-index: 2;
+  border-color: var(--marquee);
+  box-shadow: 0 10px 28px rgba(20, 24, 32, 0.18);
+}
+
+.grip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--graphite);
+  cursor: grab;
+  touch-action: none;
+  flex: none;
+}
+
+.grip:hover {
+  color: var(--text);
+  background: var(--hover);
+}
+
+.lifted .grip {
+  cursor: grabbing;
+}
+
+.row-thumb {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 56px;
+  flex: none;
+}
+
+.row-info {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  flex: 1;
+}
+
+.row-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 560;
+}
+
+.row-meta {
+  color: var(--graphite);
+  font-size: var(--fs-sm);
+  font-variant-numeric: tabular-nums;
 }
 
 /* ----------------------------------------------------------- overlays */
