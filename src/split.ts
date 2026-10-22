@@ -33,7 +33,7 @@ export class SplitTool {
   constructor(container: HTMLElement, private host: ToolHost) {
     this.root = document.createElement("div");
     this.root.className = "workspace";
-    this.root.id = "split";
+    this.root.id = "split-tool";
     this.root.hidden = true;
     this.root.innerHTML = `
       <header class="toolbar">

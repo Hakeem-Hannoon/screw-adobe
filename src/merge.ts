@@ -26,7 +26,7 @@ export class MergeTool {
   constructor(container: HTMLElement, private host: ToolHost) {
     this.root = document.createElement("div");
     this.root.className = "workspace";
-    this.root.id = "merge";
+    this.root.id = "merge-tool";
     this.root.hidden = true;
     this.root.innerHTML = `
       <header class="toolbar">
@@ -37,7 +37,7 @@ export class MergeTool {
           <span class="filename" data-summary></span>
         </div>
         <div class="tb-group tb-right">
-          <button type="button" class="btn primary" data-go title="Download (Ctrl S)">${icons.download}<span>Download merged PDF</span></button>
+          <button type="button" class="btn primary" data-go title="Download (Ctrl S)">${icons.download}<span>Download<span class="lbl"> merged PDF</span></span></button>
         </div>
       </header>
       <div class="scroller" data-scroller>
@@ -200,9 +200,9 @@ export class MergeTool {
       e.preventDefault();
       const sib = e.key === "ArrowUp" ? li.previousElementSibling : li.nextElementSibling;
       if (!sib) return;
-      if (e.key === "ArrowUp") this.list.insertBefore(li, sib);
-      else this.list.insertBefore(sib, li);
-      grip.focus();
+      // Move the neighbor, not this row, so focus stays put.
+      if (e.key === "ArrowUp") li.after(sib);
+      else li.before(sib);
       this.syncOrder();
     });
     return li;
@@ -219,7 +219,11 @@ export class MergeTool {
     (next?.querySelector<HTMLElement>("[aria-label^='Remove']") ?? this.addBtn).focus();
   }
 
-  /** Pointer drag on the grip: the row follows the pointer, swapping past neighbors' midpoints. */
+  /**
+   * Pointer drag on the grip: neighbors swap around the row as the pointer
+   * passes their midpoints. The neighbors are what move in the DOM, never the
+   * dragged row, because detaching it would drop its pointer capture.
+   */
   private drag(e: PointerEvent, li: HTMLLIElement, grip: HTMLElement): void {
     if (e.button !== 0) return;
     e.preventDefault();
@@ -232,12 +236,12 @@ export class MergeTool {
     const move = (ev: PointerEvent) => {
       let prev = li.previousElementSibling;
       while (prev && ev.clientY < mid(prev)) {
-        this.list.insertBefore(li, prev);
+        li.after(prev);
         prev = li.previousElementSibling;
       }
       let next = li.nextElementSibling;
       while (next && ev.clientY > mid(next)) {
-        this.list.insertBefore(next, li);
+        li.before(next);
         next = li.nextElementSibling;
       }
       // Scroll when dragging near the top or bottom edge.
@@ -250,11 +254,13 @@ export class MergeTool {
       grip.removeEventListener("pointermove", move);
       grip.removeEventListener("pointerup", up);
       grip.removeEventListener("pointercancel", up);
+      grip.removeEventListener("lostpointercapture", up);
       this.syncOrder();
     };
     grip.addEventListener("pointermove", move);
     grip.addEventListener("pointerup", up);
     grip.addEventListener("pointercancel", up);
+    grip.addEventListener("lostpointercapture", up);
   }
 
   private syncOrder(): void {

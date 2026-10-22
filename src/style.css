@@ -1182,7 +1182,11 @@ button {
   opacity: 0.9;
 }
 
-.part-pages:hover .cut svg,
+.part-pages:hover .cut svg {
+  opacity: 0.45;
+}
+
+.part-pages .cut:hover svg,
 .cut:focus-visible svg {
   opacity: 1;
 }
