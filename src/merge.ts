@@ -1,5 +1,6 @@
 import { buildPdfs } from "./combine";
 import { icons } from "./icons";
+import { makeSortable } from "./reorder";
 import { closeSource, loadSource, type PdfSource } from "./source";
 import { Thumbs } from "./thumbs";
 import { baseName, isPdf, saveFile, showBusy, toast } from "./ui";
@@ -194,17 +195,7 @@ export class MergeTool {
     li.append(grip, thumb, info, remove);
 
     remove.addEventListener("click", () => this.remove(src, li));
-    grip.addEventListener("pointerdown", (e) => this.drag(e, li, grip));
-    grip.addEventListener("keydown", (e) => {
-      if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
-      e.preventDefault();
-      const sib = e.key === "ArrowUp" ? li.previousElementSibling : li.nextElementSibling;
-      if (!sib) return;
-      // Move the neighbor, not this row, so focus stays put.
-      if (e.key === "ArrowUp") li.after(sib);
-      else li.before(sib);
-      this.syncOrder();
-    });
+    makeSortable(li, grip, this.scroller, () => this.syncOrder());
     return li;
   }
 
@@ -217,50 +208,6 @@ export class MergeTool {
     this.files = this.files.filter((f) => f !== src);
     this.sync();
     (next?.querySelector<HTMLElement>("[aria-label^='Remove']") ?? this.addBtn).focus();
-  }
-
-  /**
-   * Pointer drag on the grip: neighbors swap around the row as the pointer
-   * passes their midpoints. The neighbors are what move in the DOM, never the
-   * dragged row, because detaching it would drop its pointer capture.
-   */
-  private drag(e: PointerEvent, li: HTMLLIElement, grip: HTMLElement): void {
-    if (e.button !== 0) return;
-    e.preventDefault();
-    grip.setPointerCapture(e.pointerId);
-    li.classList.add("lifted");
-    const mid = (el: Element) => {
-      const r = el.getBoundingClientRect();
-      return r.top + r.height / 2;
-    };
-    const move = (ev: PointerEvent) => {
-      let prev = li.previousElementSibling;
-      while (prev && ev.clientY < mid(prev)) {
-        li.after(prev);
-        prev = li.previousElementSibling;
-      }
-      let next = li.nextElementSibling;
-      while (next && ev.clientY > mid(next)) {
-        li.before(next);
-        next = li.nextElementSibling;
-      }
-      // Scroll when dragging near the top or bottom edge.
-      const box = this.scroller.getBoundingClientRect();
-      if (ev.clientY < box.top + 48) this.scroller.scrollBy(0, -12);
-      else if (ev.clientY > box.bottom - 48) this.scroller.scrollBy(0, 12);
-    };
-    const up = () => {
-      li.classList.remove("lifted");
-      grip.removeEventListener("pointermove", move);
-      grip.removeEventListener("pointerup", up);
-      grip.removeEventListener("pointercancel", up);
-      grip.removeEventListener("lostpointercapture", up);
-      this.syncOrder();
-    };
-    grip.addEventListener("pointermove", move);
-    grip.addEventListener("pointerup", up);
-    grip.addEventListener("pointercancel", up);
-    grip.addEventListener("lostpointercapture", up);
   }
 
   private syncOrder(): void {
