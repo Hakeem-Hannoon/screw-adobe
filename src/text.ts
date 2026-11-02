@@ -1,4 +1,4 @@
-import { countWords, extractPages, joinPages } from "./extract";
+import { countWords, extractPages, joinPages, layoutText } from "./extract";
 import { icons } from "./icons";
 import type { ToolHost } from "./merge";
 import { closeSource, loadSource, type PdfSource } from "./source";
@@ -129,7 +129,10 @@ export class TextTool {
 
     let pages: string[];
     try {
-      pages = await extractPages(src.doc, (done, total) => showBusy(`Reading page ${done} of ${total}`));
+      const layouts = await extractPages(src.doc, {
+        onProgress: (done, total) => showBusy(`Reading page ${done} of ${total}`),
+      });
+      pages = layouts.map(layoutText);
     } catch (err) {
       console.error(err);
       closeSource(src);

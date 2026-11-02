@@ -18,11 +18,11 @@ let counter = 0;
  * Open a PDF file, asking for its password if it has one. Resolves with null
  * if they cancel the password prompt; rejects if the file can't be read.
  */
-export async function loadSource(file: File): Promise<PdfSource | null> {
+export async function loadSource(file: File, opts: { fontNames?: boolean } = {}): Promise<PdfSource | null> {
   const bytes = new Uint8Array(await file.arrayBuffer());
   let doc: PDFDocumentProxy;
   try {
-    ({ doc } = await openPdf(bytes, (wrong) => askPassword(wrong, file.name)));
+    ({ doc } = await openPdf(bytes, (wrong) => askPassword(wrong, file.name), opts));
   } catch (err) {
     const dialog = document.querySelector<HTMLDialogElement>("#pw-dialog");
     if (dialog?.open) dialog.close();
