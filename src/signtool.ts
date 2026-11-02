@@ -102,12 +102,24 @@ export class SignTool {
           </div>
           <div class="sg-section">
             <span class="sg-label" id="sg-style-label">Style</span>
-            <div class="sg-styles" role="radiogroup" aria-labelledby="sg-style-label">
-              ${STYLES.map(
-                (s, i) =>
-                  `<button type="button" role="radio" class="sg-style" data-style="${i}" aria-label="${s.family}"><img alt="" data-preview="${i}" hidden /><span class="sg-sample" style="font-family: '${s.family}'">Signature</span></button>`,
-              ).join("")}
-              <button type="button" role="radio" class="sg-style sg-draw" data-style="draw">${icons.pen}<span>Draw it</span></button>
+            <div role="radiogroup" aria-labelledby="sg-style-label">
+              ${(["natural", "fancy"] as const)
+                .map(
+                  (group) => `
+                <p class="sg-group">${group === "natural" ? "Natural" : "Fancy"}</p>
+                <div class="sg-styles">
+                  ${STYLES.map((s, i) =>
+                    s.group !== group
+                      ? ""
+                      : `<button type="button" role="radio" class="sg-style" data-style="${i}" aria-label="${s.family}"><img alt="" data-preview="${i}" hidden /><span class="sg-sample" style="font-family: '${s.family}'">Signature</span></button>`,
+                  ).join("")}
+                </div>`,
+                )
+                .join("")}
+              <p class="sg-group">Your own</p>
+              <div class="sg-styles">
+                <button type="button" role="radio" class="sg-style sg-draw" data-style="draw">${icons.pen}<span>Draw it</span></button>
+              </div>
             </div>
           </div>
           <div class="sg-section" data-pad-wrap hidden>
@@ -287,7 +299,7 @@ export class SignTool {
         sample.style.color = `rgb(${INKS[ink].color.join(",")})`;
         continue;
       }
-      const sig = await typedSignature(name, s.family, s.scale, ink);
+      const sig = await typedSignature(name, s.family, ink);
       if (run !== this.previewRun) return;
       this.previews[i] = sig;
       img.src = sig.url;
@@ -301,7 +313,7 @@ export class SignTool {
     const sig =
       this.style === "draw"
         ? drawnSignature(this.strokes, this.ink)
-        : await typedSignature(this.name, STYLES[this.style].family, STYLES[this.style].scale, this.ink);
+        : await typedSignature(this.name, STYLES[this.style].family, this.ink);
     if (!sig) return;
     this.sig = sig;
     this.setStep("place");
