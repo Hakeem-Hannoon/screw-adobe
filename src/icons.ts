@@ -26,6 +26,7 @@ export const icons = {
   grid: svg('<rect x="4" y="4" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1"/>'),
   check: svg('<path d="m5 12.5 4.5 4.5L19 7.5"/>'),
   compress: svg('<path d="M4 9h5V4M20 9h-5V4M4 15h5v5M20 15h-5v5"/>'),
+  compare: svg('<rect x="3.5" y="4" width="7" height="16" rx="1"/><rect x="13.5" y="4" width="7" height="16" rx="1"/><path d="M15.5 9h3M15.5 12.5h3M5.5 9h3"/>'),
   back: svg('<path d="M15 6l-6 6 6 6"/>'),
   arrow: svg('<path d="M5 12h14M13 6l6 6-6 6"/>'),
   copy: svg(
