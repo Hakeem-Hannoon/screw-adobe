@@ -19,9 +19,9 @@ const app = document.querySelector<HTMLDivElement>("#app")!;
 app.innerHTML = `
 <main class="home" id="home">
   <div class="home-inner">
-    <h1 class="wordmark" aria-label="screw adobe">
-      <span aria-hidden="true">screw</span>
-      <span class="redacted" aria-hidden="true"><span class="redacted-word">adobe</span><span class="redacted-bar"></span></span>
+    <h1 class="wordmark" aria-label="HackerPDF">
+      <span aria-hidden="true">Hacker</span>
+      <span class="redacted" aria-hidden="true"><span class="redacted-word">PDF</span><span class="redacted-bar"></span></span>
     </h1>
     <nav class="tools" aria-label="Tools">
       <button type="button" class="tool-link primary" id="choose">${icons.box}<span>Redact</span></button>
@@ -37,7 +37,7 @@ app.innerHTML = `
   <header class="toolbar">
     <div class="tb-group tb-file">
       <button type="button" class="mini-mark" id="close-file" title="Close this file">
-        <span>screw</span><span class="mini-bar"></span>
+        <span>Hacker</span><span class="mini-bar"></span>
       </button>
       <span class="filename" id="filename"></span>
     </div>
@@ -163,7 +163,7 @@ let activePreset: Preset | null = null;
 type Mode = "home" | "editor" | "merge" | "split" | "text";
 type ToolMode = Exclude<Mode, "home" | "editor">;
 let mode: Mode = "home";
-const HOME_TITLE = "screw adobe: black out anything in a PDF";
+const HOME_TITLE = "HackerPDF: redact, merge, split and convert PDFs";
 const merge = new MergeTool(app, { goHome });
 const split = new SplitTool(app, { goHome });
 const text = new TextTool(app, { goHome });
@@ -213,7 +213,7 @@ async function openFile(file: File): Promise<void> {
     setMode("editor");
     filenameEl.textContent = file.name;
     filenameEl.title = file.name;
-    document.title = `${file.name} - screw adobe`;
+    document.title = `${file.name} - HackerPDF`;
 
     viewer = new Viewer(scroller, doc, sizes, store, settings);
     viewer.onSelectionChange = (shape) => {

@@ -1,4 +1,4 @@
-# screw adobe
+# HackerPDF
 
 Black out or white out anything in a PDF, then download a clean copy. Merge and split PDFs, or pull out their text, too. Runs entirely in your browser: your files are never uploaded anywhere.
 
