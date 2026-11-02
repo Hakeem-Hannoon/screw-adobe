@@ -17,6 +17,7 @@ import { NumberTool } from "./numbertool";
 import { RotateTool } from "./rotate";
 import { OrganizeTool } from "./organize";
 import { CompressTool } from "./compresstool";
+import { CompareTool } from "./comparetool";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
 
 // ------------------------------------------------------------------ markup
@@ -39,6 +40,7 @@ app.innerHTML = `
       <button type="button" class="tool-link" id="go-rotate">${icons.rotate}<span>Rotate</span></button>
       <button type="button" class="tool-link" id="go-organize">${icons.grid}<span>Organize pages</span></button>
       <button type="button" class="tool-link" id="go-compress">${icons.compress}<span>Compress</span></button>
+      <button type="button" class="tool-link" id="go-compare">${icons.compare}<span>Compare</span></button>
     </nav>
   </div>
   <input type="file" id="file-input" accept="application/pdf,.pdf" hidden />
@@ -171,7 +173,7 @@ let findMatches: Match[] = [];
 let findCursor = -1;
 let activePreset: Preset | null = null;
 
-type Mode = "home" | "editor" | "merge" | "split" | "text" | "images" | "numbers" | "rotate" | "organize" | "compress";
+type Mode = "home" | "editor" | "merge" | "split" | "text" | "images" | "numbers" | "rotate" | "organize" | "compress" | "compare";
 type ToolMode = Exclude<Mode, "home" | "editor">;
 let mode: Mode = "home";
 const HOME_TITLE = "HackerPDF: redact, merge, split and convert PDFs";
@@ -183,7 +185,8 @@ const numbers = new NumberTool(app, { goHome });
 const rotate = new RotateTool(app, { goHome });
 const organize = new OrganizeTool(app, { goHome });
 const compress = new CompressTool(app, { goHome });
-const tools = { merge, split, text, images, numbers, rotate, organize, compress } satisfies Record<ToolMode, unknown>;
+const compare = new CompareTool(app, { goHome });
+const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare } satisfies Record<ToolMode, unknown>;
 
 // ----------------------------------------------------------------- helpers
 
@@ -272,6 +275,7 @@ function setMode(next: Mode): void {
   rotate.root.hidden = next !== "rotate";
   organize.root.hidden = next !== "organize";
   compress.root.hidden = next !== "compress";
+  compare.root.hidden = next !== "compare";
   if (next === "home") document.title = HOME_TITLE;
 }
 
@@ -284,6 +288,7 @@ function goHome(): void {
   rotate.close();
   organize.close();
   compress.close();
+  compare.close();
   setMode("home");
 }
 
@@ -295,7 +300,7 @@ function startTool(tool: ToolMode, files?: File[]): void {
   t.open();
   setMode(tool);
   if (!files) t.pick();
-  else if (tool === "merge" || tool === "images") void tools[tool].add(files);
+  else if (tool === "merge" || tool === "images" || tool === "compare") void tools[tool].add(files);
   else void tools[tool].load(files[0]);
 }
 
@@ -538,6 +543,7 @@ $("#go-numbers").addEventListener("click", () => startTool("numbers"));
 $("#go-rotate").addEventListener("click", () => startTool("rotate"));
 $("#go-organize").addEventListener("click", () => startTool("organize"));
 $("#go-compress").addEventListener("click", () => startTool("compress"));
+$("#go-compare").addEventListener("click", () => startTool("compare"));
 document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((b) =>
   b.addEventListener("click", () => setTool(b.dataset.tool as Tool)),
 );
@@ -656,6 +662,7 @@ window.addEventListener("dragenter", (e) => {
     rotate: "Drop a PDF to rotate it",
     organize: "Drop a PDF to organize it",
     compress: "Drop a PDF to compress it",
+    compare: "Drop one or both PDFs to compare",
     editor: "Drop your PDF to open it",
     home: onlyImages
       ? many
@@ -684,7 +691,7 @@ window.addEventListener("drop", (e) => {
   dropzone.hidden = true;
   const files = Array.from(e.dataTransfer?.files ?? []);
   if (!files.length) return;
-  if (mode === "merge" || mode === "images") void tools[mode].add(files);
+  if (mode === "merge" || mode === "images" || mode === "compare") void tools[mode].add(files);
   else if (mode !== "home" && mode !== "editor") void tools[mode].load(files.find(isPdf) ?? files[0]);
   else if (files.filter(isPdf).length > 1) startTool("merge", files);
   else if (!files.some(isPdf) && files.some(isImage)) startTool("images", files);
