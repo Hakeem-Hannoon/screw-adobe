@@ -2,7 +2,7 @@
   "name": "screw-adobe",
   "private": true,
   "version": "1.0.0",
-  "description": "A tiny, private, in-browser PDF editor for redacting (black/white boxes), merging and splitting PDFs.",
+  "description": "A tiny, private, in-browser PDF editor for redacting (black/white boxes), merging, splitting and extracting text from PDFs.",
   "type": "module",
   "scripts": {
     "predev": "node scripts/copy-pdfjs-assets.mjs",

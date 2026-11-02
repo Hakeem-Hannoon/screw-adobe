@@ -10,6 +10,7 @@ import { icons } from "./icons";
 import { askPassword, baseName, isPdf, saveFile, showBusy, toast } from "./ui";
 import { MergeTool } from "./merge";
 import { SplitTool } from "./split";
+import { TextTool } from "./text";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
 
 // ------------------------------------------------------------------ markup
@@ -30,6 +31,7 @@ app.innerHTML = `
     <div class="more-tools" role="group" aria-label="Other tools">
       <button type="button" class="tool-link" id="go-merge">${icons.merge}<span><strong>Merge PDFs</strong><small>Combine several files into one</small></span></button>
       <button type="button" class="tool-link" id="go-split">${icons.scissors}<span><strong>Split a PDF</strong><small>Cut one file into smaller ones</small></span></button>
+      <button type="button" class="tool-link" id="go-text">${icons.fileText}<span><strong>PDF to text</strong><small>Save all the text as a .txt file</small></span></button>
     </div>
     <p class="privacy">Your files never leave this device. Nothing is uploaded, and there's no server to upload to.</p>
   </div>
@@ -163,11 +165,14 @@ let findMatches: Match[] = [];
 let findCursor = -1;
 let activePreset: Preset | null = null;
 
-type Mode = "home" | "editor" | "merge" | "split";
+type Mode = "home" | "editor" | "merge" | "split" | "text";
+type ToolMode = Exclude<Mode, "home" | "editor">;
 let mode: Mode = "home";
 const HOME_TITLE = "screw adobe: black out anything in a PDF";
 const merge = new MergeTool(app, { goHome });
 const split = new SplitTool(app, { goHome });
+const text = new TextTool(app, { goHome });
+const tools = { merge, split, text } satisfies Record<ToolMode, unknown>;
 
 // ----------------------------------------------------------------- helpers
 
@@ -250,25 +255,27 @@ function setMode(next: Mode): void {
   editor.hidden = next !== "editor";
   merge.root.hidden = next !== "merge";
   split.root.hidden = next !== "split";
+  text.root.hidden = next !== "text";
   if (next === "home") document.title = HOME_TITLE;
 }
 
 function goHome(): void {
   merge.close();
   split.close();
+  text.close();
   setMode("home");
 }
 
-/** Switch to Merge or Split. With no files, opens the file picker (call from a click). */
-function startTool(tool: "merge" | "split", files?: File[]): void {
+/** Switch to Merge, Split or PDF to text. With no files, opens the file picker (call from a click). */
+function startTool(tool: ToolMode, files?: File[]): void {
   if (unsaved() && !window.confirm(`Discard your changes to ${current!.name}?`)) return;
   closeFile(true);
-  const t = tool === "merge" ? merge : split;
+  const t = tools[tool];
   t.open();
   setMode(tool);
   if (!files) t.pick();
   else if (tool === "merge") void merge.add(files);
-  else void split.load(files[0]);
+  else void tools[tool].load(files[0]);
 }
 
 // ----------------------------------------------------------------- toolbar
@@ -504,6 +511,7 @@ fileInput.addEventListener("change", () => {
 $("#close-file").addEventListener("click", () => closeFile());
 $("#go-merge").addEventListener("click", () => startTool("merge"));
 $("#go-split").addEventListener("click", () => startTool("split"));
+$("#go-text").addEventListener("click", () => startTool("text"));
 document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((b) =>
   b.addEventListener("click", () => setTool(b.dataset.tool as Tool)),
 );
@@ -537,9 +545,9 @@ document.addEventListener("keydown", (e) => {
   const mod = e.metaKey || e.ctrlKey;
   const key = e.key.toLowerCase();
 
-  if ((mode === "merge" || mode === "split") && mod && key === "s") {
+  if ((mode === "merge" || mode === "split" || mode === "text") && mod && key === "s") {
     e.preventDefault();
-    void (mode === "merge" ? merge.download() : split.download());
+    void tools[mode].download();
     return;
   }
   if (!current || !viewer) return;
@@ -616,9 +624,11 @@ window.addEventListener("dragenter", (e) => {
       ? "Drop PDFs to add them"
       : mode === "split"
         ? "Drop a PDF to split it"
-        : many
-          ? "Drop to merge these PDFs"
-          : "Drop your PDF to open it";
+        : mode === "text"
+          ? "Drop a PDF to get its text"
+          : many
+            ? "Drop to merge these PDFs"
+            : "Drop your PDF to open it";
   dropzone.hidden = false;
 });
 window.addEventListener("dragover", (e) => {
@@ -638,7 +648,7 @@ window.addEventListener("drop", (e) => {
   const files = Array.from(e.dataTransfer?.files ?? []);
   if (!files.length) return;
   if (mode === "merge") void merge.add(files);
-  else if (mode === "split") void split.load(files.find(isPdf) ?? files[0]);
+  else if (mode === "split" || mode === "text") void tools[mode].load(files.find(isPdf) ?? files[0]);
   else if (files.filter(isPdf).length > 1) startTool("merge", files);
   else void openFile(files.find(isPdf) ?? files[0]);
 });
