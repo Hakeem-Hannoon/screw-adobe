@@ -18,6 +18,7 @@ Black out or white out anything in a PDF, then download a clean copy. Merge, spl
 - **Images to PDF:** turn photos, scans or screenshots (JPEG, PNG, WebP, GIF, SVG, and HEIC in Safari) into one PDF, one image per page. Drag them into order, pick Letter, A4 or pages that fit each image, with or without margins. Drop images on the home screen to start.
 - **Page numbers:** pick where the number goes by clicking on a blank page, then preview your real pages with the numbers on before downloading. Choose `1`, `Page 1`, `1 / 12` or `Page 1 of 12`, three sizes, and whether to skip the first page (it still counts). Works on rotated pages too.
 - **Rotate:** click a page to turn it right (Shift-click for left), or turn every page at once. Turning only changes how each page is displayed, so nothing on it is re-rendered.
+- **Organize pages:** drag pages into a new order, select pages (Shift-click for a range) to delete them (with undo) or extract them into their own PDF.
 
 ## Why the redaction is real
 
@@ -35,7 +36,7 @@ Password-protected files are always fully flattened, and the downloaded copy has
 
 ### Merging, splitting, rotating, images and page numbers
 
-Merged, split, rotated and numbered files are built the same way as untouched pages above: brand-new PDFs with no metadata, bookmarks, attachments or scripts, and with links between pages removed (web links stay). That matters for splitting: a page that links to page 10 would otherwise drag page 10 into a file you meant to contain only pages 1 to 3. Pages from password-protected files are turned into images.
+Merged, split, organized, rotated and numbered files are built the same way as untouched pages above: brand-new PDFs with no metadata, bookmarks, attachments or scripts, and with links between pages removed (web links stay). That matters for splitting: a page that links to page 10 would otherwise drag page 10 into a file you meant to contain only pages 1 to 3. Pages from password-protected files are turned into images.
 
 Photos carry hidden metadata: often the GPS location they were taken at, the time, and the phone's make and serial number. Images to PDF leaves all of it out. JPEGs are copied without re-compressing, minus their metadata; sideways phone photos are turned upright.
 
