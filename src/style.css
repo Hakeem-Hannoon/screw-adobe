@@ -1537,6 +1537,91 @@ button {
   }
 }
 
+/* rotate */
+
+.rot-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 18px 14px;
+  padding: 28px 24px 96px;
+}
+
+.rot-fig {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.rot-page {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.rot-page:hover {
+  background: var(--hover);
+}
+
+.rot-turn {
+  display: grid;
+  place-items: center;
+  transition: transform 220ms cubic-bezier(0.3, 0, 0.2, 1);
+}
+
+.rot-badge {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  background: var(--primary-bg);
+  color: var(--primary-fg);
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.rot-page:hover .rot-badge,
+.rot-page:focus-visible .rot-badge {
+  opacity: 1;
+}
+
+@media (hover: none) {
+  .rot-badge {
+    opacity: 0.85;
+    width: 26px;
+    height: 26px;
+  }
+}
+
+.rot-fig figcaption {
+  color: var(--graphite);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.rot-fig.turned figcaption {
+  color: var(--marquee);
+  font-weight: 600;
+}
+
+@media (max-width: 520px) {
+  .rot-grid {
+    gap: 12px 8px;
+    padding: 16px 8px 96px;
+  }
+}
+
 /* --------------------------------------------------------- responsive */
 
 @media (max-width: 1100px) {
@@ -1587,6 +1672,9 @@ button {
 }
 
 @media (prefers-reduced-motion: reduce) {
+  .rot-turn {
+    transition: none;
+  }
   .redacted-bar,
   .toast {
     animation: none;
