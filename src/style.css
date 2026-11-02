@@ -1958,6 +1958,24 @@ button {
   }
 }
 
+/* ocr */
+
+.notice-btn {
+  display: flex;
+  margin-top: 10px;
+}
+
+.ocr-card {
+  display: block;
+}
+
+.ocr-headline {
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 720;
+  letter-spacing: -0.015em;
+}
+
 /* --------------------------------------------------------- responsive */
 
 @media (max-width: 1100px) {

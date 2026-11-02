@@ -1,5 +1,6 @@
 import { countWords, extractPages, joinPages, layoutText, type Line } from "./extract";
 import { toMarkdown } from "./markdown";
+import { ocrPage, ocrToLines } from "./ocr";
 import { icons } from "./icons";
 import type { ToolHost } from "./merge";
 import { closeSource, loadSource, type PdfSource } from "./source";
@@ -17,6 +18,9 @@ export class TextTool {
   /** Plain text of each page. */
   private pages: string[] = [];
   private format: Format = "text";
+  /** Pages read with OCR, and how confident it was on average (0-100). */
+  private ocred: number[] = [];
+  private ocrConfidence = 0;
   private input: HTMLInputElement;
   private goBtn: HTMLButtonElement;
   private copyBtn: HTMLButtonElement;
@@ -206,10 +210,49 @@ export class TextTool {
   private reset(): void {
     if (this.src) closeSource(this.src);
     this.src = null;
+    this.ocred = [];
     this.layouts = [];
     this.pages = [];
     this.output.textContent = "";
     this.sync();
+  }
+
+  private setNotice(text: string, offerOcr: boolean): void {
+    this.notice.replaceChildren(text);
+    if (offerOcr) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "btn notice-btn";
+      b.innerHTML = `${icons.scan}<span>Read with OCR</span>`;
+      b.addEventListener("click", () => void this.runOcr());
+      this.notice.append(b);
+    }
+  }
+
+  /** Read the pages that have no text with OCR, and fold them into the output. */
+  private async runOcr(): Promise<void> {
+    const src = this.src;
+    if (!src) return;
+    const todo = this.pages.map((p, i) => (p ? -1 : i)).filter((i) => i >= 0);
+    let conf = 0;
+    try {
+      for (const [k, i] of todo.entries()) {
+        showBusy(`Reading page ${i + 1} (${k + 1} of ${todo.length})`);
+        const res = await ocrPage(src.doc, i, (t) => showBusy(t));
+        if (this.src !== src) return;
+        this.layouts[i] = ocrToLines(res);
+        this.pages[i] = layoutText(this.layouts[i]);
+        conf += res.confidence;
+        this.ocred.push(i);
+      }
+    } catch (err) {
+      console.error(err);
+      toast("The scanned pages couldn't be read.", "Try again. If it keeps failing, the file may be damaged.");
+    } finally {
+      showBusy(null);
+    }
+    this.ocrConfidence = todo.length ? conf / todo.length : 0;
+    this.render();
   }
 
   private render(): void {
@@ -217,15 +260,27 @@ export class TextTool {
     const total = this.pages.length;
     const hasText = empty < total;
 
+    const why = empty === 1 ? "it's a scan or an image" : "they're scans or images";
     if (!hasText) {
-      this.notice.textContent =
-        "No text found. This PDF is probably scanned pages or images, so there are no letters to pull out, only pictures of them.";
+      this.setNotice(
+        "No text found. This PDF is probably scanned pages or images: pictures of letters rather than letters. OCR can read them.",
+        true,
+      );
     } else if (empty) {
-      this.notice.textContent = `${plural(empty, "page")} had no text, probably because ${empty === 1 ? "it's a scan or an image" : "they're scans or images"}.`;
+      this.setNotice(
+        `${plural(empty, "page")} had no text, probably because ${why}. OCR can read ${empty === 1 ? "it" : "them"}.`,
+        true,
+      );
+    } else if (this.ocred.length) {
+      const conf = Math.round(this.ocrConfidence);
+      this.setNotice(
+        `${plural(this.ocred.length, "page")} ${this.ocred.length === 1 ? "was" : "were"} read with OCR (${conf}% confident on average). Check names and numbers before relying on them.`,
+        false,
+      );
     } else {
-      this.notice.textContent = "";
+      this.setNotice("", false);
     }
-    this.notice.hidden = !this.notice.textContent;
+    this.notice.hidden = !this.notice.firstChild;
     this.output.hidden = !hasText;
     this.output.textContent = hasText ? this.text() : "";
     this.sync();

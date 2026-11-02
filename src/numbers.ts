@@ -71,44 +71,44 @@ export async function addPageNumbers(
   return { bytes, flattened: built.flattened };
 }
 
+/**
+ * A point given as seen (from the top-left, y down, in points) converted to
+ * the page's own coordinates (from the bottom-left, y up), undoing the
+ * page's rotation. `angle` is how far to turn text drawn there so it reads
+ * upright once the page is shown.
+ */
+export function visualToUser(
+  page: PDFPage,
+  vx: number,
+  vy: number,
+): { x: number; y: number; angle: 0 | 90 | 180 | 270 } {
+  const box = page.getCropBox();
+  const r = (((page.getRotation().angle % 360) + 360) % 360) as 0 | 90 | 180 | 270;
+  if (r === 0) return { x: box.x + vx, y: box.y + box.height - vy, angle: r };
+  if (r === 90) return { x: box.x + vy, y: box.y + vx, angle: r };
+  if (r === 180) return { x: box.x + box.width - vx, y: box.y + vy, angle: r };
+  return { x: box.x + box.width - vy, y: box.y + box.height - vx, angle: r };
+}
+
+/** The page's size as seen, which for a rotated page isn't how it's stored. */
+export function visualSize(page: PDFPage): { w: number; h: number } {
+  const box = page.getCropBox();
+  const r = (((page.getRotation().angle % 360) + 360) % 360) as number;
+  return r === 90 || r === 270 ? { w: box.height, h: box.width } : { w: box.width, h: box.height };
+}
+
 function drawLabel(
   page: PDFPage,
   text: string,
   font: Awaited<ReturnType<PDFDocument["embedFont"]>>,
   opts: NumberOptions,
 ) {
-  const box = page.getCropBox();
-  const r = (((page.getRotation().angle % 360) + 360) % 360) as 0 | 90 | 180 | 270;
-  const sideways = r === 90 || r === 270;
-  // The page as it's seen, which for a rotated page isn't how it's stored.
-  const VW = sideways ? box.height : box.width;
-  const VH = sideways ? box.width : box.height;
-
+  const { w: VW, h: VH } = visualSize(page);
   const w = font.widthOfTextAtSize(text, opts.size);
   const capHeight = font.heightAtSize(opts.size, { descender: false });
   const c = anchor(opts.fx, opts.fy, VW, VH, w, capHeight, opts.size * 0.4);
-
   // Where the label's start sits, as seen: left edge, baseline.
-  const vx = c.x - w / 2;
-  const vy = c.y + capHeight / 2;
-
-  // Seen coordinates (from the top-left, y down) to the page's own (from the
-  // bottom-left, y up), undoing the page's rotation.
-  let x: number;
-  let y: number;
-  if (r === 0) {
-    x = box.x + vx;
-    y = box.y + box.height - vy;
-  } else if (r === 90) {
-    x = box.x + vy;
-    y = box.y + vx;
-  } else if (r === 180) {
-    x = box.x + box.width - vx;
-    y = box.y + vy;
-  } else {
-    x = box.x + box.width - vy;
-    y = box.y + box.height - vx;
-  }
+  const at = visualToUser(page, c.x - w / 2, c.y + capHeight / 2);
   // Turned by the page's rotation so it reads upright once the page is shown.
-  page.drawText(text, { x, y, size: opts.size, font, color: rgb(0, 0, 0), rotate: degrees(r) });
+  page.drawText(text, { x: at.x, y: at.y, size: opts.size, font, color: rgb(0, 0, 0), rotate: degrees(at.angle) });
 }
