@@ -32,7 +32,7 @@ export class TextTool {
       <header class="toolbar">
         <div class="tb-group tb-file">
           <button type="button" class="mini-mark" data-home title="Back to start">
-            <span>screw</span><span class="mini-bar"></span>
+            <span>Hacker</span><span class="mini-bar"></span>
           </button>
           <span class="filename" data-name></span>
         </div>
@@ -96,7 +96,7 @@ export class TextTool {
 
   open(): void {
     this.active = true;
-    document.title = this.src ? `${this.src.name} as text - screw adobe` : "PDF to text - screw adobe";
+    document.title = this.src ? `${this.src.name} as text - HackerPDF` : "PDF to text - HackerPDF";
   }
 
   close(): void {
@@ -146,7 +146,7 @@ export class TextTool {
     this.reset();
     this.src = src;
     this.pages = pages;
-    document.title = `${src.name} as text - screw adobe`;
+    document.title = `${src.name} as text - HackerPDF`;
     this.render();
     this.root.querySelector<HTMLElement>("[data-scroller]")!.scrollTop = 0;
   }

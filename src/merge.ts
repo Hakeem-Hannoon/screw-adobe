@@ -32,7 +32,7 @@ export class MergeTool {
       <header class="toolbar">
         <div class="tb-group tb-file">
           <button type="button" class="mini-mark" data-home title="Back to start">
-            <span>screw</span><span class="mini-bar"></span>
+            <span>Hacker</span><span class="mini-bar"></span>
           </button>
           <span class="filename" data-summary></span>
         </div>
@@ -76,7 +76,7 @@ export class MergeTool {
 
   open(): void {
     this.active = true;
-    document.title = "Merge PDFs - screw adobe";
+    document.title = "Merge PDFs - HackerPDF";
     this.sync();
   }
 

@@ -1,5 +1,5 @@
 {
-  "name": "screw-adobe",
+  "name": "hackerpdf",
   "private": true,
   "version": "1.0.0",
   "description": "A tiny, private, in-browser PDF editor for redacting (black/white boxes), merging, splitting and extracting text from PDFs.",

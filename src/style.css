@@ -1,4 +1,4 @@
-/* screw adobe
+/* HackerPDF
    A monochrome workspace: the only "colors" are the two inks the tool lays down
    (pure black, pure white) plus one selection blue for anything interactive. */
 
@@ -223,7 +223,7 @@ button {
   letter-spacing: -0.045em;
   display: flex;
   white-space: nowrap;
-  column-gap: 0.22em;
+  column-gap: 0.14em;
 }
 
 .redacted {
@@ -385,7 +385,7 @@ button {
 
 .mini-bar {
   display: inline-block;
-  width: 2.3em;
+  width: 1.9em;
   height: 0.78em;
   margin-top: 0.08em;
   background: #000;

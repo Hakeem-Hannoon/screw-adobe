@@ -39,7 +39,7 @@ export class SplitTool {
       <header class="toolbar">
         <div class="tb-group tb-file">
           <button type="button" class="mini-mark" data-home title="Back to start">
-            <span>screw</span><span class="mini-bar"></span>
+            <span>Hacker</span><span class="mini-bar"></span>
           </button>
           <span class="filename" data-name></span>
         </div>
@@ -138,7 +138,7 @@ export class SplitTool {
 
   open(): void {
     this.active = true;
-    document.title = this.src ? `Split ${this.src.name} - screw adobe` : "Split a PDF - screw adobe";
+    document.title = this.src ? `Split ${this.src.name} - HackerPDF` : "Split a PDF - HackerPDF";
   }
 
   close(): void {
@@ -185,7 +185,7 @@ export class SplitTool {
       return fig;
     });
     this.everyInput.max = String(src.sizes.length);
-    document.title = `Split ${src.name} - screw adobe`;
+    document.title = `Split ${src.name} - HackerPDF`;
     this.render();
     this.scroller.scrollTop = 0;
     if (src.sizes.length === 1) toast("This PDF has only one page.", "There's nothing to split. Try a longer file.");
