@@ -211,18 +211,12 @@ button {
   padding: 48px 24px 12vh;
 }
 
-@media (hover: none) {
-  .hint {
-    display: none;
-  }
-}
-
 .home-inner {
   width: min(760px, 100%);
 }
 
 .wordmark {
-  margin: 0 0 28px;
+  margin: 0 0 36px;
   font-size: clamp(44px, 11.5vw, 124px);
   font-weight: 800;
   line-height: 0.95;
@@ -272,77 +266,60 @@ button {
   }
 }
 
-.lede {
-  margin: 0 0 28px;
-  max-width: 30ch;
-  font-size: clamp(20px, 2.6vw, 26px);
-  line-height: 1.3;
-  font-weight: 450;
-  letter-spacing: -0.01em;
-}
-
-.home-actions {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 14px 18px;
-  margin-bottom: 24px;
-}
-
-.more-tools {
-  display: flex;
-  flex-wrap: wrap;
+.tools {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 40px;
 }
 
 .tool-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 16px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  min-height: 104px;
+  padding: 16px;
   border: 1px solid var(--rule);
-  border-radius: 12px;
-  background: transparent;
+  border-radius: 14px;
+  background: var(--surface);
+  font-size: 16px;
+  font-weight: 620;
   text-align: left;
   cursor: pointer;
 }
 
 .tool-link:hover {
   border-color: var(--graphite);
-  background: var(--hover);
 }
 
 .tool-link svg {
-  flex: none;
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   color: var(--graphite);
 }
 
-.tool-link strong {
-  display: block;
-  font-weight: 620;
+.tool-link.primary {
+  background: var(--primary-bg);
+  border-color: var(--primary-bg);
+  color: var(--primary-fg);
 }
 
-.tool-link small {
-  display: block;
-  color: var(--graphite);
-  font-size: var(--fs-sm);
+.tool-link.primary svg {
+  color: inherit;
 }
 
-.hint {
-  color: var(--graphite);
-  font-size: 15px;
+.tool-link.primary:hover {
+  opacity: 0.86;
 }
 
-.privacy {
-  margin: 0;
-  padding-top: 16px;
-  border-top: 1px solid var(--rule);
-  max-width: 52ch;
-  color: var(--graphite);
-  font-size: var(--fs-sm);
+@media (max-width: 560px) {
+  .tools {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .tool-link {
+    min-height: 88px;
+  }
 }
 
 /* -------------------------------------------------------------- editor */
