@@ -19,6 +19,7 @@ Black out or white out anything in a PDF, then download a clean copy. Merge, spl
 - **Page numbers:** pick where the number goes by clicking on a blank page, then preview your real pages with the numbers on before downloading. Choose `1`, `Page 1`, `1 / 12` or `Page 1 of 12`, three sizes, and whether to skip the first page (it still counts). Works on rotated pages too.
 - **Rotate:** click a page to turn it right (Shift-click for left), or turn every page at once. Turning only changes how each page is displayed, so nothing on it is re-rendered.
 - **Organize pages:** drag pages into a new order, select pages (Shift-click for a range) to delete them (with undo) or extract them into their own PDF.
+- **Compress:** shrink a PDF by re-compressing the photos and scans inside it: Light, Strong, Smallest, or *Fit a size* (the lightest setting that gets under, say, 2 MB). Text, vector drawings, fonts, links, bookmarks and form fields are left exactly as they were, so text stays selectable. Shows before/after sizes and page 1 side by side.
 
 ## Why the redaction is real
 
