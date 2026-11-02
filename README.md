@@ -14,13 +14,14 @@ Black out or white out anything in a PDF, then download a clean copy. Merge, spl
 - **Password-protected PDFs** open after you enter the password.
 - **Merge PDFs:** add several files, drag them into order, download one PDF. Drop two or more PDFs on the page to start a merge.
 - **Split a PDF:** click between pages to cut, or cut every N pages. Untick any part you don't want. One part downloads as a PDF; several come as a ZIP.
-- **PDF to text:** pull all the text out of a PDF as plain text (`.txt`) or **Markdown** (`.md`), or copy it. Markdown picks up headings from font sizes, bulleted and numbered lists, tables, and bold and italic text. Optionally mark where each page starts, or (for plain text) join wrapped lines so paragraphs reflow wherever you paste them. Scanned PDFs have no text to pull out (they're pictures of letters), and the tool tells you when that's the case.
+- **PDF to text:** pull all the text out of a PDF as plain text (`.txt`) or **Markdown** (`.md`), or copy it. Markdown picks up headings from font sizes, bulleted and numbered lists, tables, and bold and italic text. Scanned pages can be read with OCR right there. Optionally mark where each page starts, or (for plain text) join wrapped lines so paragraphs reflow wherever you paste them. Scanned PDFs have no text to pull out (they're pictures of letters), and the tool tells you when that's the case.
 - **Images to PDF:** turn photos, scans or screenshots (JPEG, PNG, WebP, GIF, SVG, and HEIC in Safari) into one PDF, one image per page. Drag them into order, pick Letter, A4 or pages that fit each image, with or without margins. Drop images on the home screen to start.
 - **Page numbers:** pick where the number goes by clicking on a blank page, then preview your real pages with the numbers on before downloading. Choose `1`, `Page 1`, `1 / 12` or `Page 1 of 12`, three sizes, and whether to skip the first page (it still counts). Works on rotated pages too.
 - **Rotate:** click a page to turn it right (Shift-click for left), or turn every page at once. Turning only changes how each page is displayed, so nothing on it is re-rendered.
 - **Organize pages:** drag pages into a new order, select pages (Shift-click for a range) to delete them (with undo) or extract them into their own PDF.
 - **Compress:** shrink a PDF by re-compressing the photos and scans inside it: Light, Strong, Smallest, or *Fit a size* (the lightest setting that gets under, say, 2 MB). Text, vector drawings, fonts, links, bookmarks and form fields are left exactly as they were, so text stays selectable. Shows before/after sizes and page 1 side by side.
 - **Compare:** two versions of a PDF, matched page by page by their text (so an added or removed page is reported as such), with changed regions outlined on both pages and a word-by-word text diff. Catches visual-only changes too, like a recolored figure.
+- **Make searchable (OCR):** read scanned pages with Tesseract, a neural-network OCR engine that runs on your device (English). The page looks the same, but an invisible text layer is laid exactly over each word, so the text can be selected, searched and copied. Sideways and upside-down scans are detected and read the right way up. Pages that already have text are left alone.
 
 ## Why the redaction is real
 
@@ -44,7 +45,7 @@ Photos carry hidden metadata: often the GPS location they were taken at, the tim
 
 ## Privacy
 
-There's no backend. The production build ships a Content-Security-Policy with `connect-src 'self'`, so the page can't send your file to any other server even if it wanted to. Fonts and pdf.js assets are self-hosted; nothing loads from a third party.
+There's no backend. The production build ships a Content-Security-Policy with `connect-src 'self'`, so the page can't send your file to any other server even if it wanted to. Fonts, pdf.js assets and the OCR engine and its language model are self-hosted; nothing loads from a third party.
 
 ## Keyboard shortcuts
 
@@ -69,7 +70,7 @@ npm run build    # type-check + production build into dist/
 npm run preview  # serve dist/ (with the production CSP)
 ```
 
-Built with [pdf.js](https://mozilla.github.io/pdf.js/) for rendering and text search, [pdf-lib](https://pdf-lib.js.org/) for writing the output, Vite, and TypeScript. No framework.
+Built with [pdf.js](https://mozilla.github.io/pdf.js/) for rendering and text search, [pdf-lib](https://pdf-lib.js.org/) for writing the output, [Tesseract.js](https://tesseract.projectnaptha.com/) for OCR, Vite, and TypeScript. No framework.
 
 ## Deploy
 
