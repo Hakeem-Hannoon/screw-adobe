@@ -1457,6 +1457,86 @@ button {
   margin-top: 18px;
 }
 
+/* page numbers */
+
+.np-place {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  padding: 24px 24px 96px;
+}
+
+.np-prompt {
+  margin: 0;
+  color: var(--graphite);
+  font-size: 15px;
+  text-align: center;
+}
+
+.np-blank {
+  --ar: 0.773;
+  position: relative;
+  width: min(460px, 100%, calc((100dvh - 250px) * var(--ar)));
+  aspect-ratio: var(--ar);
+  background: #fff;
+  box-shadow: var(--paper-shadow);
+  cursor: crosshair;
+  touch-action: manipulation;
+}
+
+.np-num {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  font-family: Helvetica, Arial, sans-serif;
+  line-height: 1;
+  color: #000;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.np-blank .np-num {
+  outline: 1.5px dashed var(--marquee);
+  outline-offset: 4px;
+}
+
+.np-preview {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 24px 20px;
+  padding: 28px 24px 96px;
+}
+
+.np-fig {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.np-page {
+  position: relative;
+}
+
+.np-fig figcaption {
+  color: var(--graphite);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 520px) {
+  .np-place {
+    padding: 16px 12px 96px;
+  }
+  .np-preview {
+    gap: 16px 12px;
+    padding: 16px 12px 96px;
+  }
+}
+
 /* --------------------------------------------------------- responsive */
 
 @media (max-width: 1100px) {
