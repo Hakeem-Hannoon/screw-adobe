@@ -4,6 +4,17 @@ import "@fontsource/homemade-apple/400.css";
 import "@fontsource/la-belle-aurore/400.css";
 import "@fontsource/cedarville-cursive/400.css";
 import "@fontsource/ms-madi/400.css";
+import "@fontsource/nothing-you-could-do/400.css";
+import "@fontsource/dawning-of-a-new-day/400.css";
+import "@fontsource/zeyada/400.css";
+import "@fontsource/kristi/400.css";
+import "@fontsource/waiting-for-the-sunrise/400.css";
+import "@fontsource/great-vibes/400.css";
+import "@fontsource/alex-brush/400.css";
+import "@fontsource/pinyon-script/400.css";
+import "@fontsource/monsieur-la-doulaise/400.css";
+import "@fontsource/italianno/400.css";
+import "@fontsource/imperial-script/400.css";
 import { degrees, PDFDocument } from "pdf-lib";
 import { buildPdfs } from "./combine";
 import { visualSize, visualToUser } from "./numbers";
@@ -16,15 +27,31 @@ export const INKS = {
 } as const;
 export type Ink = keyof typeof INKS;
 
-/** Handwriting fonts for typed signatures, with how big to set each so they come out a similar size. */
-export const STYLES = [
-  { family: "Mrs Saint Delafield", scale: 1.25 },
-  { family: "Herr Von Muellerhoff", scale: 1.3 },
-  { family: "Ms Madi", scale: 1.15 },
-  { family: "Homemade Apple", scale: 0.78 },
-  { family: "La Belle Aurore", scale: 0.95 },
-  { family: "Cedarville Cursive", scale: 0.9 },
-] as const;
+export type StyleGroup = "natural" | "fancy";
+
+/**
+ * Handwriting fonts for typed signatures. "Natural" ones look like an
+ * everyday pen signature; "fancy" ones are calligraphy and formal script.
+ */
+export const STYLES: readonly { family: string; group: StyleGroup }[] = [
+  { family: "Herr Von Muellerhoff", group: "natural" },
+  { family: "Homemade Apple", group: "natural" },
+  { family: "La Belle Aurore", group: "natural" },
+  { family: "Cedarville Cursive", group: "natural" },
+  { family: "Nothing You Could Do", group: "natural" },
+  { family: "Dawning of a New Day", group: "natural" },
+  { family: "Zeyada", group: "natural" },
+  { family: "Kristi", group: "natural" },
+  { family: "Waiting for the Sunrise", group: "natural" },
+  { family: "Mrs Saint Delafield", group: "fancy" },
+  { family: "Ms Madi", group: "fancy" },
+  { family: "Great Vibes", group: "fancy" },
+  { family: "Alex Brush", group: "fancy" },
+  { family: "Pinyon Script", group: "fancy" },
+  { family: "Monsieur La Doulaise", group: "fancy" },
+  { family: "Italianno", group: "fancy" },
+  { family: "Imperial Script", group: "fancy" },
+];
 
 /** A finished signature: a transparent PNG and its size in pixels. */
 export interface Signature {
@@ -44,10 +71,17 @@ export async function loadFont(family: string): Promise<void> {
   await document.fonts.load(`${BASE}px "${family}"`, "Signature");
 }
 
-/** A typed name drawn in a handwriting font, with a slight slant and ink texture. */
-export async function typedSignature(name: string, family: string, scale: number, ink: Ink): Promise<Signature> {
+/**
+ * A typed name drawn in a handwriting font, with a slight slant and ink
+ * texture. Fonts differ a lot in how big their letters are at the same
+ * size, so each is scaled until its capitals stand the same height.
+ */
+export async function typedSignature(name: string, family: string, ink: Ink): Promise<Signature> {
   await loadFont(family);
-  const size = BASE * scale;
+  const measure = document.createElement("canvas").getContext("2d")!;
+  measure.font = `100px "${family}"`;
+  const cap = measure.measureText("H").actualBoundingBoxAscent || 70;
+  const size = Math.min(BASE * 2, Math.max(BASE * 0.6, (BASE * 70) / cap));
   const font = `${size}px "${family}"`;
   const probe = document.createElement("canvas").getContext("2d")!;
   probe.font = font;
