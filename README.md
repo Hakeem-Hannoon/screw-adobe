@@ -1,6 +1,6 @@
 # HackerPDF
 
-Black out or white out anything in a PDF, then download a clean copy. Merge and split PDFs, pull out their text, or turn images into a PDF, too. Runs entirely in your browser: your files are never uploaded anywhere.
+Black out or white out anything in a PDF, then download a clean copy. Merge, split, rotate and number PDFs, pull out their text, or turn images into a PDF, too. Runs entirely in your browser: your files are never uploaded anywhere.
 
 **Live:** https://hakeem-hannoon.github.io/screw-adobe/
 
@@ -17,6 +17,7 @@ Black out or white out anything in a PDF, then download a clean copy. Merge and 
 - **PDF to text:** pull all the text out of a PDF as plain text (`.txt`) or **Markdown** (`.md`), or copy it. Markdown picks up headings from font sizes, bulleted and numbered lists, tables, and bold and italic text. Optionally mark where each page starts, or (for plain text) join wrapped lines so paragraphs reflow wherever you paste them. Scanned PDFs have no text to pull out (they're pictures of letters), and the tool tells you when that's the case.
 - **Images to PDF:** turn photos, scans or screenshots (JPEG, PNG, WebP, GIF, SVG, and HEIC in Safari) into one PDF, one image per page. Drag them into order, pick Letter, A4 or pages that fit each image, with or without margins. Drop images on the home screen to start.
 - **Page numbers:** pick where the number goes by clicking on a blank page, then preview your real pages with the numbers on before downloading. Choose `1`, `Page 1`, `1 / 12` or `Page 1 of 12`, three sizes, and whether to skip the first page (it still counts). Works on rotated pages too.
+- **Rotate:** click a page to turn it right (Shift-click for left), or turn every page at once. Turning only changes how each page is displayed, so nothing on it is re-rendered.
 
 ## Why the redaction is real
 
@@ -32,9 +33,9 @@ Want the strongest option? Open the arrow next to **Download** and turn on **Fla
 
 Password-protected files are always fully flattened, and the downloaded copy has no password.
 
-### Merging, splitting, images and page numbers
+### Merging, splitting, rotating, images and page numbers
 
-Merged, split and numbered files are built the same way as untouched pages above: brand-new PDFs with no metadata, bookmarks, attachments or scripts, and with links between pages removed (web links stay). That matters for splitting: a page that links to page 10 would otherwise drag page 10 into a file you meant to contain only pages 1 to 3. Pages from password-protected files are turned into images.
+Merged, split, rotated and numbered files are built the same way as untouched pages above: brand-new PDFs with no metadata, bookmarks, attachments or scripts, and with links between pages removed (web links stay). That matters for splitting: a page that links to page 10 would otherwise drag page 10 into a file you meant to contain only pages 1 to 3. Pages from password-protected files are turned into images.
 
 Photos carry hidden metadata: often the GPS location they were taken at, the time, and the phone's make and serial number. Images to PDF leaves all of it out. JPEGs are copied without re-compressing, minus their metadata; sideways phone photos are turned upright.
 

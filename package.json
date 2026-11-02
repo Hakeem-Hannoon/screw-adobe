@@ -2,7 +2,7 @@
   "name": "hackerpdf",
   "private": true,
   "version": "1.0.0",
-  "description": "A tiny, private, in-browser PDF editor for redacting (black/white boxes), merging, splitting and extracting text from PDFs.",
+  "description": "Private, in-browser PDF tools: redact, merge, split, rotate, number pages, convert to text or Markdown, and turn images into PDFs.",
   "type": "module",
   "scripts": {
     "predev": "node scripts/copy-pdfjs-assets.mjs",
