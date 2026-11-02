@@ -1,6 +1,6 @@
 # screw adobe
 
-Black out or white out anything in a PDF, then download a clean copy. Merge and split PDFs too. Runs entirely in your browser: your files are never uploaded anywhere.
+Black out or white out anything in a PDF, then download a clean copy. Merge and split PDFs, or pull out their text, too. Runs entirely in your browser: your files are never uploaded anywhere.
 
 **Live:** https://hakeem-hannoon.github.io/screw-adobe/
 
@@ -14,6 +14,7 @@ Black out or white out anything in a PDF, then download a clean copy. Merge and 
 - **Password-protected PDFs** open after you enter the password.
 - **Merge PDFs:** add several files, drag them into order, download one PDF. Drop two or more PDFs on the page to start a merge.
 - **Split a PDF:** click between pages to cut, or cut every N pages. Untick any part you don't want. One part downloads as a PDF; several come as a ZIP.
+- **PDF to text:** pull all the text out of a PDF and download it as a `.txt` file, or copy it. Optionally mark where each page starts, or join wrapped lines so paragraphs reflow wherever you paste them. Scanned PDFs have no text to pull out (they're pictures of letters), and the tool tells you when that's the case.
 
 ## Why the redaction is real
 
@@ -49,7 +50,7 @@ There's no backend. The production build ships a Content-Security-Policy with `c
 | `Ctrl/⌘ Z`, `Ctrl/⌘ Shift Z` | Undo, redo |
 | `Ctrl/⌘ F` | Find text to cover |
 | `Ctrl/⌘ +`, `-`, `0` | Zoom in, out, fit width |
-| `Ctrl/⌘ S` | Download (also in Merge and Split) |
+| `Ctrl/⌘ S` | Download (also in Merge, Split and PDF to text) |
 
 ## Develop
 
