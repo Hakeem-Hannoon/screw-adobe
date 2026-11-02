@@ -23,17 +23,12 @@ app.innerHTML = `
       <span aria-hidden="true">screw</span>
       <span class="redacted" aria-hidden="true"><span class="redacted-word">adobe</span><span class="redacted-bar"></span></span>
     </h1>
-    <p class="lede">Black out or white out anything in a PDF, then download a clean copy.</p>
-    <div class="home-actions">
-      <button type="button" class="btn primary lg" id="choose">${icons.file}<span>Choose a PDF</span></button>
-      <span class="hint">or drop one anywhere on this page</span>
-    </div>
-    <div class="more-tools" role="group" aria-label="Other tools">
-      <button type="button" class="tool-link" id="go-merge">${icons.merge}<span><strong>Merge PDFs</strong><small>Combine several files into one</small></span></button>
-      <button type="button" class="tool-link" id="go-split">${icons.scissors}<span><strong>Split a PDF</strong><small>Cut one file into smaller ones</small></span></button>
-      <button type="button" class="tool-link" id="go-text">${icons.fileText}<span><strong>PDF to text</strong><small>Save all the text as a .txt file</small></span></button>
-    </div>
-    <p class="privacy">Your files never leave this device. Nothing is uploaded, and there's no server to upload to.</p>
+    <nav class="tools" aria-label="Tools">
+      <button type="button" class="tool-link primary" id="choose">${icons.box}<span>Redact</span></button>
+      <button type="button" class="tool-link" id="go-merge">${icons.merge}<span>Merge</span></button>
+      <button type="button" class="tool-link" id="go-split">${icons.scissors}<span>Split</span></button>
+      <button type="button" class="tool-link" id="go-text">${icons.fileText}<span>PDF to text</span></button>
+    </nav>
   </div>
   <input type="file" id="file-input" accept="application/pdf,.pdf" hidden />
 </main>
