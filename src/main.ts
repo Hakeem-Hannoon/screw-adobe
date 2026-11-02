@@ -13,6 +13,7 @@ import { SplitTool } from "./split";
 import { TextTool } from "./text";
 import { ImageTool } from "./imagetool";
 import { isImage } from "./images";
+import { NumberTool } from "./numbertool";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
 
 // ------------------------------------------------------------------ markup
@@ -31,6 +32,7 @@ app.innerHTML = `
       <button type="button" class="tool-link" id="go-split">${icons.scissors}<span>Split</span></button>
       <button type="button" class="tool-link" id="go-text">${icons.fileText}<span>PDF to text</span></button>
       <button type="button" class="tool-link" id="go-images">${icons.image}<span>Images to PDF</span></button>
+      <button type="button" class="tool-link" id="go-numbers">${icons.hash}<span>Page numbers</span></button>
     </nav>
   </div>
   <input type="file" id="file-input" accept="application/pdf,.pdf" hidden />
@@ -163,7 +165,7 @@ let findMatches: Match[] = [];
 let findCursor = -1;
 let activePreset: Preset | null = null;
 
-type Mode = "home" | "editor" | "merge" | "split" | "text" | "images";
+type Mode = "home" | "editor" | "merge" | "split" | "text" | "images" | "numbers";
 type ToolMode = Exclude<Mode, "home" | "editor">;
 let mode: Mode = "home";
 const HOME_TITLE = "HackerPDF: redact, merge, split and convert PDFs";
@@ -171,7 +173,8 @@ const merge = new MergeTool(app, { goHome });
 const split = new SplitTool(app, { goHome });
 const text = new TextTool(app, { goHome });
 const images = new ImageTool(app, { goHome });
-const tools = { merge, split, text, images } satisfies Record<ToolMode, unknown>;
+const numbers = new NumberTool(app, { goHome });
+const tools = { merge, split, text, images, numbers } satisfies Record<ToolMode, unknown>;
 
 // ----------------------------------------------------------------- helpers
 
@@ -256,6 +259,7 @@ function setMode(next: Mode): void {
   split.root.hidden = next !== "split";
   text.root.hidden = next !== "text";
   images.root.hidden = next !== "images";
+  numbers.root.hidden = next !== "numbers";
   if (next === "home") document.title = HOME_TITLE;
 }
 
@@ -264,6 +268,7 @@ function goHome(): void {
   split.close();
   text.close();
   images.close();
+  numbers.close();
   setMode("home");
 }
 
@@ -514,6 +519,7 @@ $("#go-merge").addEventListener("click", () => startTool("merge"));
 $("#go-split").addEventListener("click", () => startTool("split"));
 $("#go-text").addEventListener("click", () => startTool("text"));
 $("#go-images").addEventListener("click", () => startTool("images"));
+$("#go-numbers").addEventListener("click", () => startTool("numbers"));
 document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((b) =>
   b.addEventListener("click", () => setTool(b.dataset.tool as Tool)),
 );
@@ -628,6 +634,7 @@ window.addEventListener("dragenter", (e) => {
     split: "Drop a PDF to split it",
     text: "Drop a PDF to get its text",
     images: "Drop images to add them",
+    numbers: "Drop a PDF to number its pages",
     editor: "Drop your PDF to open it",
     home: onlyImages
       ? many
@@ -657,7 +664,7 @@ window.addEventListener("drop", (e) => {
   const files = Array.from(e.dataTransfer?.files ?? []);
   if (!files.length) return;
   if (mode === "merge" || mode === "images") void tools[mode].add(files);
-  else if (mode === "split" || mode === "text") void tools[mode].load(files.find(isPdf) ?? files[0]);
+  else if (mode === "split" || mode === "text" || mode === "numbers") void tools[mode].load(files.find(isPdf) ?? files[0]);
   else if (files.filter(isPdf).length > 1) startTool("merge", files);
   else if (!files.some(isPdf) && files.some(isImage)) startTool("images", files);
   else void openFile(files.find(isPdf) ?? files[0]);
