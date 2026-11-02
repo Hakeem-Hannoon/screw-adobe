@@ -18,6 +18,8 @@ import { RotateTool } from "./rotate";
 import { OrganizeTool } from "./organize";
 import { CompressTool } from "./compresstool";
 import { CompareTool } from "./comparetool";
+import { OcrTool } from "./ocrtool";
+import { stopEngine } from "./ocr";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
 
 // ------------------------------------------------------------------ markup
@@ -34,13 +36,14 @@ app.innerHTML = `
       <button type="button" class="tool-link primary" id="choose">${icons.box}<span>Redact</span></button>
       <button type="button" class="tool-link" id="go-merge">${icons.merge}<span>Merge</span></button>
       <button type="button" class="tool-link" id="go-split">${icons.scissors}<span>Split</span></button>
-      <button type="button" class="tool-link" id="go-text">${icons.fileText}<span>PDF to text</span></button>
-      <button type="button" class="tool-link" id="go-images">${icons.image}<span>Images to PDF</span></button>
-      <button type="button" class="tool-link" id="go-numbers">${icons.hash}<span>Page numbers</span></button>
-      <button type="button" class="tool-link" id="go-rotate">${icons.rotate}<span>Rotate</span></button>
       <button type="button" class="tool-link" id="go-organize">${icons.grid}<span>Organize pages</span></button>
+      <button type="button" class="tool-link" id="go-rotate">${icons.rotate}<span>Rotate</span></button>
       <button type="button" class="tool-link" id="go-compress">${icons.compress}<span>Compress</span></button>
+      <button type="button" class="tool-link" id="go-numbers">${icons.hash}<span>Page numbers</span></button>
       <button type="button" class="tool-link" id="go-compare">${icons.compare}<span>Compare</span></button>
+      <button type="button" class="tool-link" id="go-text">${icons.fileText}<span>PDF to text</span></button>
+      <button type="button" class="tool-link" id="go-ocr">${icons.scan}<span>Make searchable</span></button>
+      <button type="button" class="tool-link" id="go-images">${icons.image}<span>Images to PDF</span></button>
     </nav>
   </div>
   <input type="file" id="file-input" accept="application/pdf,.pdf" hidden />
@@ -173,7 +176,7 @@ let findMatches: Match[] = [];
 let findCursor = -1;
 let activePreset: Preset | null = null;
 
-type Mode = "home" | "editor" | "merge" | "split" | "text" | "images" | "numbers" | "rotate" | "organize" | "compress" | "compare";
+type Mode = "home" | "editor" | "merge" | "split" | "text" | "images" | "numbers" | "rotate" | "organize" | "compress" | "compare" | "ocr";
 type ToolMode = Exclude<Mode, "home" | "editor">;
 let mode: Mode = "home";
 const HOME_TITLE = "HackerPDF: redact, merge, split and convert PDFs";
@@ -186,7 +189,8 @@ const rotate = new RotateTool(app, { goHome });
 const organize = new OrganizeTool(app, { goHome });
 const compress = new CompressTool(app, { goHome });
 const compare = new CompareTool(app, { goHome });
-const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare } satisfies Record<ToolMode, unknown>;
+const ocr = new OcrTool(app, { goHome });
+const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare, ocr } satisfies Record<ToolMode, unknown>;
 
 // ----------------------------------------------------------------- helpers
 
@@ -276,6 +280,7 @@ function setMode(next: Mode): void {
   organize.root.hidden = next !== "organize";
   compress.root.hidden = next !== "compress";
   compare.root.hidden = next !== "compare";
+  ocr.root.hidden = next !== "ocr";
   if (next === "home") document.title = HOME_TITLE;
 }
 
@@ -289,6 +294,8 @@ function goHome(): void {
   organize.close();
   compress.close();
   compare.close();
+  ocr.close();
+  void stopEngine();
   setMode("home");
 }
 
@@ -544,6 +551,7 @@ $("#go-rotate").addEventListener("click", () => startTool("rotate"));
 $("#go-organize").addEventListener("click", () => startTool("organize"));
 $("#go-compress").addEventListener("click", () => startTool("compress"));
 $("#go-compare").addEventListener("click", () => startTool("compare"));
+$("#go-ocr").addEventListener("click", () => startTool("ocr"));
 document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((b) =>
   b.addEventListener("click", () => setTool(b.dataset.tool as Tool)),
 );
@@ -663,6 +671,7 @@ window.addEventListener("dragenter", (e) => {
     organize: "Drop a PDF to organize it",
     compress: "Drop a PDF to compress it",
     compare: "Drop one or both PDFs to compare",
+    ocr: "Drop a scanned PDF to read it",
     editor: "Drop your PDF to open it",
     home: onlyImages
       ? many
