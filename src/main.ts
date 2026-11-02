@@ -20,6 +20,7 @@ import { CompressTool } from "./compresstool";
 import { CompareTool } from "./comparetool";
 import { OcrTool } from "./ocrtool";
 import { stopEngine } from "./ocr";
+import { SignTool } from "./signtool";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
 
 // ------------------------------------------------------------------ markup
@@ -34,6 +35,7 @@ app.innerHTML = `
     </h1>
     <nav class="tools" aria-label="Tools">
       <button type="button" class="tool-link primary" id="choose">${icons.box}<span>Redact</span></button>
+      <button type="button" class="tool-link" id="go-sign">${icons.pen}<span>Sign</span></button>
       <button type="button" class="tool-link" id="go-merge">${icons.merge}<span>Merge</span></button>
       <button type="button" class="tool-link" id="go-split">${icons.scissors}<span>Split</span></button>
       <button type="button" class="tool-link" id="go-organize">${icons.grid}<span>Organize pages</span></button>
@@ -176,7 +178,7 @@ let findMatches: Match[] = [];
 let findCursor = -1;
 let activePreset: Preset | null = null;
 
-type Mode = "home" | "editor" | "merge" | "split" | "text" | "images" | "numbers" | "rotate" | "organize" | "compress" | "compare" | "ocr";
+type Mode = "home" | "editor" | "merge" | "split" | "text" | "images" | "numbers" | "rotate" | "organize" | "compress" | "compare" | "ocr" | "sign";
 type ToolMode = Exclude<Mode, "home" | "editor">;
 let mode: Mode = "home";
 const HOME_TITLE = "HackerPDF: redact, merge, split and convert PDFs";
@@ -190,7 +192,8 @@ const organize = new OrganizeTool(app, { goHome });
 const compress = new CompressTool(app, { goHome });
 const compare = new CompareTool(app, { goHome });
 const ocr = new OcrTool(app, { goHome });
-const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare, ocr } satisfies Record<ToolMode, unknown>;
+const sign = new SignTool(app, { goHome });
+const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare, ocr, sign } satisfies Record<ToolMode, unknown>;
 
 // ----------------------------------------------------------------- helpers
 
@@ -281,6 +284,7 @@ function setMode(next: Mode): void {
   compress.root.hidden = next !== "compress";
   compare.root.hidden = next !== "compare";
   ocr.root.hidden = next !== "ocr";
+  sign.root.hidden = next !== "sign";
   if (next === "home") document.title = HOME_TITLE;
 }
 
@@ -295,6 +299,7 @@ function goHome(): void {
   compress.close();
   compare.close();
   ocr.close();
+  sign.close();
   void stopEngine();
   setMode("home");
 }
@@ -552,6 +557,7 @@ $("#go-organize").addEventListener("click", () => startTool("organize"));
 $("#go-compress").addEventListener("click", () => startTool("compress"));
 $("#go-compare").addEventListener("click", () => startTool("compare"));
 $("#go-ocr").addEventListener("click", () => startTool("ocr"));
+$("#go-sign").addEventListener("click", () => startTool("sign"));
 document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((b) =>
   b.addEventListener("click", () => setTool(b.dataset.tool as Tool)),
 );
@@ -672,6 +678,7 @@ window.addEventListener("dragenter", (e) => {
     compress: "Drop a PDF to compress it",
     compare: "Drop one or both PDFs to compare",
     ocr: "Drop a scanned PDF to read it",
+    sign: "Drop a PDF to sign it",
     editor: "Drop your PDF to open it",
     home: onlyImages
       ? many
