@@ -1626,6 +1626,122 @@ button {
   }
 }
 
+/* organize */
+
+.org-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 16px 12px;
+  padding: 28px 24px 96px;
+}
+
+.org-fig {
+  position: relative;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  border-radius: 12px;
+}
+
+.org-fig.lifted {
+  z-index: 2;
+  background: var(--chrome);
+  box-shadow: 0 0 0 2px var(--marquee), 0 12px 28px rgba(20, 24, 32, 0.2);
+}
+
+.org-page {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.org-page:hover {
+  background: var(--hover);
+}
+
+.org-fig.selected .org-page {
+  background: var(--marquee-soft);
+  box-shadow: inset 0 0 0 2px var(--marquee);
+}
+
+.org-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: none;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  background: var(--marquee);
+  color: #fff;
+}
+
+.org-check svg {
+  width: 16px;
+  height: 16px;
+}
+
+.org-fig.selected .org-check {
+  display: grid;
+}
+
+.org-grip {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--graphite);
+  cursor: grab;
+  touch-action: none;
+  opacity: 0;
+  transition: opacity 120ms;
+}
+
+.org-fig:hover .org-grip,
+.org-grip:focus-visible,
+.org-fig.lifted .org-grip {
+  opacity: 1;
+}
+
+.org-fig.lifted .org-grip {
+  cursor: grabbing;
+}
+
+@media (hover: none) {
+  .org-grip {
+    opacity: 0.9;
+  }
+}
+
+.org-fig figcaption {
+  color: var(--graphite);
+  font-size: var(--fs-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 520px) {
+  .org-grid {
+    gap: 12px 6px;
+    padding: 16px 6px 96px;
+  }
+}
+
 /* --------------------------------------------------------- responsive */
 
 @media (max-width: 1100px) {
