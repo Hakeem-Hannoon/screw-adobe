@@ -1539,6 +1539,10 @@ button {
 
 /* rotate */
 
+.optbar .pair {
+  gap: 6px;
+}
+
 .rot-grid {
   display: flex;
   flex-wrap: wrap;
