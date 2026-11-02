@@ -2038,6 +2038,16 @@ button {
   box-shadow: 0 0 0 3px var(--marquee-soft);
 }
 
+.sg-group {
+  margin: 14px 0 8px;
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.sg-group:first-child {
+  margin-top: 0;
+}
+
 .sg-styles {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
