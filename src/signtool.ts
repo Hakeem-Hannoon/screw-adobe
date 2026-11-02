@@ -103,10 +103,10 @@ export class SignTool {
           <div class="sg-section">
             <span class="sg-label" id="sg-style-label">Style</span>
             <div role="radiogroup" aria-labelledby="sg-style-label">
-              ${(["natural", "fancy"] as const)
+              ${(["showpiece", "natural", "fancy"] as const)
                 .map(
                   (group) => `
-                <p class="sg-group">${group === "natural" ? "Natural" : "Fancy"}</p>
+                <p class="sg-group">${{ showpiece: "Showpiece", natural: "Natural", fancy: "Fancy" }[group]}</p>
                 <div class="sg-styles">
                   ${STYLES.map((s, i) =>
                     s.group !== group
@@ -299,7 +299,7 @@ export class SignTool {
         sample.style.color = `rgb(${INKS[ink].color.join(",")})`;
         continue;
       }
-      const sig = await typedSignature(name, s.family, ink);
+      const sig = await typedSignature(name, s.family, ink, s.flourish);
       if (run !== this.previewRun) return;
       this.previews[i] = sig;
       img.src = sig.url;
@@ -313,7 +313,7 @@ export class SignTool {
     const sig =
       this.style === "draw"
         ? drawnSignature(this.strokes, this.ink)
-        : await typedSignature(this.name, STYLES[this.style].family, this.ink);
+        : await typedSignature(this.name, STYLES[this.style].family, this.ink, STYLES[this.style].flourish);
     if (!sig) return;
     this.sig = sig;
     this.setStep("place");

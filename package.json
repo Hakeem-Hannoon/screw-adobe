@@ -16,6 +16,7 @@
   "dependencies": {
     "@fontsource-variable/public-sans": "^5.3.0",
     "@fontsource/alex-brush": "^5.3.0",
+    "@fontsource/ballet": "^5.3.0",
     "@fontsource/cedarville-cursive": "^5.3.0",
     "@fontsource/dawning-of-a-new-day": "^5.3.0",
     "@fontsource/great-vibes": "^5.3.0",
@@ -25,7 +26,9 @@
     "@fontsource/italianno": "^5.3.0",
     "@fontsource/kristi": "^5.3.0",
     "@fontsource/la-belle-aurore": "^5.3.0",
+    "@fontsource/mea-culpa": "^5.3.0",
     "@fontsource/monsieur-la-doulaise": "^5.3.0",
+    "@fontsource/mr-de-haviland": "^5.3.0",
     "@fontsource/mrs-saint-delafield": "^5.3.0",
     "@fontsource/ms-madi": "^5.3.0",
     "@fontsource/nothing-you-could-do": "^5.3.0",
