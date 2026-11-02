@@ -20,6 +20,7 @@ Black out or white out anything in a PDF, then download a clean copy. Merge, spl
 - **Rotate:** click a page to turn it right (Shift-click for left), or turn every page at once. Turning only changes how each page is displayed, so nothing on it is re-rendered.
 - **Organize pages:** drag pages into a new order, select pages (Shift-click for a range) to delete them (with undo) or extract them into their own PDF.
 - **Compress:** shrink a PDF by re-compressing the photos and scans inside it: Light, Strong, Smallest, or *Fit a size* (the lightest setting that gets under, say, 2 MB). Text, vector drawings, fonts, links, bookmarks and form fields are left exactly as they were, so text stays selectable. Shows before/after sizes and page 1 side by side.
+- **Compare:** two versions of a PDF, matched page by page by their text (so an added or removed page is reported as such), with changed regions outlined on both pages and a word-by-word text diff. Catches visual-only changes too, like a recolored figure.
 
 ## Why the redaction is real
 

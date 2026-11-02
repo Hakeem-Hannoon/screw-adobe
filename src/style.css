@@ -1801,6 +1801,163 @@ button {
   }
 }
 
+/* compare */
+
+.cmpr-picks {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.cmpr-picks .drop-card {
+  padding: 28px 18px;
+}
+
+.cmpr-picks .drop-card.chosen {
+  border-style: solid;
+  border-color: var(--marquee);
+  background: var(--marquee-soft);
+}
+
+.cmpr-picks .drop-card small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 22ch;
+}
+
+.cmpr-hint {
+  margin: 14px 0 0;
+  color: var(--graphite);
+  font-size: var(--fs-sm);
+}
+
+.cmpr-pages {
+  --w: 380px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 28px;
+  padding: 28px 16px 96px;
+}
+
+.cmpr-pages.only-changes .cmpr-row[data-state="same"] {
+  display: none;
+}
+
+.cmpr-row {
+  width: calc(var(--w) * 2 + 16px);
+  max-width: 100%;
+}
+
+.cmpr-row header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.cmpr-badge {
+  font-size: var(--fs-sm);
+  color: var(--graphite);
+}
+
+.cmpr-row[data-state="changed"] .cmpr-badge,
+.cmpr-row[data-state="added"] .cmpr-badge,
+.cmpr-row[data-state="removed"] .cmpr-badge {
+  color: #d92d20;
+  font-weight: 600;
+}
+
+.cmpr-row[data-state="pending"] .cmpr-badge::after {
+  content: "Checking…";
+}
+
+.cmpr-pair {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.cmpr-side {
+  min-height: 120px;
+}
+
+.cmpr-side.missing {
+  display: grid;
+  place-items: center;
+  border: 1.5px dashed var(--rule);
+  border-radius: 6px;
+  color: var(--graphite);
+}
+
+.cmpr-side.missing::after {
+  content: "No page here";
+  font-size: var(--fs-sm);
+}
+
+.cmpr-canvas {
+  display: block;
+  width: 100%;
+  height: auto;
+  box-shadow: var(--paper-shadow);
+}
+
+.cmpr-text {
+  padding-top: 24px;
+}
+
+.cmpr-tblock {
+  margin-bottom: 22px;
+  padding: 16px 20px;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.cmpr-tblock h3 {
+  margin: 0 0 8px;
+  font-size: var(--fs-md);
+}
+
+.cmpr-diff {
+  margin: 0;
+  line-height: 1.7;
+  overflow-wrap: anywhere;
+}
+
+.cmpr-diff del {
+  background: rgba(255, 59, 48, 0.16);
+  color: inherit;
+  text-decoration-color: rgba(217, 45, 32, 0.8);
+}
+
+.cmpr-diff ins {
+  background: rgba(52, 199, 89, 0.2);
+  color: inherit;
+  text-decoration: none;
+  border-bottom: 2px solid rgba(36, 138, 61, 0.7);
+}
+
+.cmpr-gap {
+  color: var(--graphite);
+}
+
+@media (max-width: 520px) {
+  .cmpr-pages {
+    --w: 170px;
+    padding: 16px 8px 96px;
+  }
+  .cmpr-pair {
+    gap: 8px;
+  }
+  .cmpr-picks {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* --------------------------------------------------------- responsive */
 
 @media (max-width: 1100px) {
