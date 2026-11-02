@@ -15,6 +15,9 @@ import "@fontsource/pinyon-script/400.css";
 import "@fontsource/monsieur-la-doulaise/400.css";
 import "@fontsource/italianno/400.css";
 import "@fontsource/imperial-script/400.css";
+import "@fontsource/ballet/400.css";
+import "@fontsource/mea-culpa/400.css";
+import "@fontsource/mr-de-haviland/400.css";
 import { degrees, PDFDocument } from "pdf-lib";
 import { buildPdfs } from "./combine";
 import { visualSize, visualToUser } from "./numbers";
@@ -27,13 +30,17 @@ export const INKS = {
 } as const;
 export type Ink = keyof typeof INKS;
 
-export type StyleGroup = "natural" | "fancy";
+export type StyleGroup = "showpiece" | "natural" | "fancy";
 
 /**
  * Handwriting fonts for typed signatures. "Natural" ones look like an
  * everyday pen signature; "fancy" ones are calligraphy and formal script.
  */
-export const STYLES: readonly { family: string; group: StyleGroup }[] = [
+export const STYLES: readonly { family: string; group: StyleGroup; flourish?: number }[] = [
+  // `flourish` adds a swash under the name, its number the pen weight to match the font's own strokes.
+  { family: "Ballet", group: "showpiece", flourish: 0.8 },
+  { family: "Mea Culpa", group: "showpiece", flourish: 0.9 },
+  { family: "Mr De Haviland", group: "showpiece", flourish: 0.6 },
   { family: "Herr Von Muellerhoff", group: "natural" },
   { family: "Homemade Apple", group: "natural" },
   { family: "La Belle Aurore", group: "natural" },
@@ -76,7 +83,7 @@ export async function loadFont(family: string): Promise<void> {
  * texture. Fonts differ a lot in how big their letters are at the same
  * size, so each is scaled until its capitals stand the same height.
  */
-export async function typedSignature(name: string, family: string, ink: Ink): Promise<Signature> {
+export async function typedSignature(name: string, family: string, ink: Ink, flourish = 0): Promise<Signature> {
   await loadFont(family);
   const measure = document.createElement("canvas").getContext("2d")!;
   measure.font = `100px "${family}"`;
@@ -87,9 +94,9 @@ export async function typedSignature(name: string, family: string, ink: Ink): Pr
   probe.font = font;
   const width = probe.measureText(name).width;
   const canvas = document.createElement("canvas");
-  // Generous room: handwriting fonts swing well past their nominal box.
-  canvas.width = Math.ceil(width + size * 1.6);
-  canvas.height = Math.ceil(size * 2.4);
+  // Generous room: handwriting fonts swing well past their nominal box (and the flourish below it).
+  canvas.width = Math.ceil(width + size * (flourish ? 2.2 : 1.6));
+  canvas.height = Math.ceil(size * (flourish ? 3.1 : 2.4));
   const g = canvas.getContext("2d")!;
   g.font = font;
   g.textBaseline = "alphabetic";
@@ -97,7 +104,80 @@ export async function typedSignature(name: string, family: string, ink: Ink): Pr
   g.translate(size * 0.8, size * 1.45);
   g.rotate((-2.5 * Math.PI) / 180); // people sign a touch uphill
   g.fillText(name, 0, 0);
+  if (flourish) {
+    const m = g.measureText(name);
+    swash(g, -m.actualBoundingBoxLeft, m.actualBoundingBoxRight, m.actualBoundingBoxAscent, size, flourish);
+  }
   return finish(canvas, ink);
+}
+
+type Pt = { x: number; y: number };
+
+/**
+ * A calligrapher's swash under a name: from the end of the last letter it
+ * dips, sweeps back left beneath the whole name, and turns up in a small
+ * hook under the first letter. Drawn as a broad-nib pen held at 40 degrees,
+ * so it swells where it crosses the nib and thins to a hairline along it,
+ * and tapers where the pen lands and lifts. Coordinates are in the text's
+ * own frame: baseline at y = 0, the name spanning x0 to x1.
+ */
+function swash(
+  g: CanvasRenderingContext2D,
+  x0: number,
+  x1: number,
+  ascent: number,
+  size: number,
+  weight: number,
+): void {
+  const w = x1 - x0;
+  const d = size * 0.34; // how far below the baseline the sweep runs
+  // Cubic Bezier segments, each [start, control, control, end].
+  const segs: [Pt, Pt, Pt, Pt][] = [
+    [
+      { x: x1 - w * 0.04, y: -ascent * 0.1 },
+      { x: x1 + w * 0.1, y: d * 0.3 },
+      { x: x1 + w * 0.02, y: d * 1.25 },
+      { x: x0 + w * 0.62, y: d * 1.18 },
+    ],
+    [
+      { x: x0 + w * 0.62, y: d * 1.18 },
+      { x: x0 + w * 0.32, y: d * 1.12 },
+      { x: x0 - w * 0.06, y: d * 1.08 },
+      { x: x0 - w * 0.04, y: d * 0.62 },
+    ],
+    [
+      { x: x0 - w * 0.04, y: d * 0.62 },
+      { x: x0 - w * 0.03, y: d * 0.18 },
+      { x: x0 + w * 0.07, y: d * 0.12 },
+      { x: x0 + w * 0.12, y: d * 0.36 },
+    ],
+  ];
+  const at = (s: [Pt, Pt, Pt, Pt], t: number): Pt => {
+    const u = 1 - t;
+    return {
+      x: u * u * u * s[0].x + 3 * u * u * t * s[1].x + 3 * u * t * t * s[2].x + t * t * t * s[3].x,
+      y: u * u * u * s[0].y + 3 * u * u * t * s[1].y + 3 * u * t * t * s[2].y + t * t * t * s[3].y,
+    };
+  };
+  // Sample the whole path finely, then stamp it with the nib.
+  const pts: Pt[] = [];
+  for (const s of segs) for (let i = 0; i < 400; i++) pts.push(at(s, i / 400));
+  pts.push(segs[segs.length - 1][3]);
+  const nib = (40 * Math.PI) / 180;
+  const thick = size * 0.06 * weight;
+  const hair = size * 0.009;
+  for (let i = 1; i < pts.length; i++) {
+    const a = pts[i - 1];
+    const b = pts[i];
+    const dir = Math.atan2(b.y - a.y, b.x - a.x);
+    const t = i / pts.length;
+    // Land softly, swell through the sweep, lift off to a fine point.
+    const taper = Math.min(1, t / 0.08) * Math.min(1, (1 - t) / 0.3) ** 1.3;
+    const r = (hair + (thick - hair) * Math.abs(Math.sin(dir - nib)) * taper) / 2;
+    g.beginPath();
+    g.arc(b.x, b.y, Math.max(hair / 2, r), 0, Math.PI * 2);
+    g.fill();
+  }
 }
 
 /**
