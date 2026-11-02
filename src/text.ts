@@ -1,4 +1,5 @@
-import { countWords, extractPages, joinPages } from "./extract";
+import { countWords, extractPages, joinPages, layoutText, type Line } from "./extract";
+import { toMarkdown } from "./markdown";
 import { icons } from "./icons";
 import type { ToolHost } from "./merge";
 import { closeSource, loadSource, type PdfSource } from "./source";
@@ -6,11 +7,16 @@ import { baseName, isPdf, saveFile, showBusy, toast } from "./ui";
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
 
-/** Pull the text out of a PDF and save it as a plain .txt file. */
+type Format = "text" | "markdown";
+
+/** Pull the text out of a PDF and save it as plain text or Markdown. */
 export class TextTool {
   readonly root: HTMLElement;
   private src: PdfSource | null = null;
+  private layouts: Line[][] = [];
+  /** Plain text of each page. */
   private pages: string[] = [];
+  private format: Format = "text";
   private input: HTMLInputElement;
   private goBtn: HTMLButtonElement;
   private copyBtn: HTMLButtonElement;
@@ -38,15 +44,19 @@ export class TextTool {
         </div>
         <div class="tb-group tb-right">
           <button type="button" class="btn" data-copy title="Copy all the text">${icons.copy}<span class="lbl">Copy</span></button>
-          <button type="button" class="btn primary" data-go title="Download (Ctrl S)">${icons.download}<span>Download<span class="lbl"> .txt</span></span></button>
+          <button type="button" class="btn primary" data-go title="Download (Ctrl S)">${icons.download}<span>Download<span class="lbl" data-ext> .txt</span></span></button>
         </div>
       </header>
       <div class="findbar optbar" data-opts hidden>
+        <div class="seg" role="radiogroup" aria-label="Format">
+          <button type="button" role="radio" data-format="text">Text</button>
+          <button type="button" role="radio" data-format="markdown" title="Headings, lists, tables, bold and italic, as Markdown">Markdown</button>
+        </div>
         <label class="check inline">
           <input type="checkbox" data-labels />
           <span><strong>Mark each page</strong></span>
         </label>
-        <label class="check inline" title="Turns each paragraph into one line, so the text rewraps wherever you paste it. Leave it off for tables and addresses.">
+        <label class="check inline" data-reflow-opt title="Turns each paragraph into one line, so the text rewraps wherever you paste it. Leave it off for tables and addresses.">
           <input type="checkbox" data-reflow />
           <span><strong>Join wrapped lines</strong></span>
         </label>
@@ -55,7 +65,7 @@ export class TextTool {
       <div class="scroller" data-scroller>
         <div class="tool-body" data-empty>
           <h1 class="tool-title">PDF to text</h1>
-          <p class="tool-sub">Pull all the text out of a PDF and save it as a plain .txt file.</p>
+          <p class="tool-sub">Pull all the text out of a PDF and save it as plain text or Markdown.</p>
           <button type="button" class="drop-card lg" data-pick>
             ${icons.fileText}
             <span><strong>Choose a PDF</strong><small>or drop one anywhere on this page</small></span>
@@ -85,6 +95,12 @@ export class TextTool {
     this.copyBtn.addEventListener("click", () => void this.copy());
     this.labels.addEventListener("change", () => this.render());
     this.reflow.addEventListener("change", () => this.render());
+    this.root.querySelectorAll<HTMLButtonElement>("[data-format]").forEach((b) =>
+      b.addEventListener("click", () => {
+        this.format = b.dataset.format as Format;
+        this.render();
+      }),
+    );
     this.input.addEventListener("change", () => {
       const f = this.input.files?.[0];
       this.input.value = "";
@@ -116,7 +132,7 @@ export class TextTool {
     showBusy(`Opening ${file.name}`);
     let src: PdfSource | null;
     try {
-      src = await loadSource(file);
+      src = await loadSource(file, { fontNames: true });
     } catch {
       showBusy(null);
       toast("This PDF couldn't be opened.", "The file may be damaged or not really a PDF.");
@@ -127,9 +143,12 @@ export class TextTool {
       return;
     }
 
-    let pages: string[];
+    let layouts: Line[][];
     try {
-      pages = await extractPages(src.doc, (done, total) => showBusy(`Reading page ${done} of ${total}`));
+      layouts = await extractPages(src.doc, {
+        fonts: true,
+        onProgress: (done, total) => showBusy(`Reading page ${done} of ${total}`),
+      });
     } catch (err) {
       console.error(err);
       closeSource(src);
@@ -145,7 +164,8 @@ export class TextTool {
 
     this.reset();
     this.src = src;
-    this.pages = pages;
+    this.layouts = layouts;
+    this.pages = layouts.map(layoutText);
     document.title = `${src.name} as text - HackerPDF`;
     this.render();
     this.root.querySelector<HTMLElement>("[data-scroller]")!.scrollTop = 0;
@@ -153,15 +173,17 @@ export class TextTool {
 
   download(): void {
     if (!this.src || this.goBtn.disabled) return;
-    const name = `${baseName(this.src.name)}.txt`;
+    const md = this.format === "markdown";
+    const name = `${baseName(this.src.name)}.${md ? "md" : "txt"}`;
     const text = this.text();
-    saveFile(new Blob([text], { type: "text/plain;charset=utf-8" }), name);
+    saveFile(new Blob([text], { type: `${md ? "text/markdown" : "text/plain"};charset=utf-8` }), name);
     toast(`Downloaded ${name}`, `${plural(countWords(text), "word")} from ${plural(this.pages.length, "page")}.`);
   }
 
   // ------------------------------------------------------------- internals
 
   private text(): string {
+    if (this.format === "markdown") return toMarkdown(this.layouts, { labels: this.labels.checked });
     return joinPages(this.pages, { labels: this.labels.checked, reflow: this.reflow.checked });
   }
 
@@ -184,6 +206,7 @@ export class TextTool {
   private reset(): void {
     if (this.src) closeSource(this.src);
     this.src = null;
+    this.layouts = [];
     this.pages = [];
     this.output.textContent = "";
     this.sync();
@@ -224,6 +247,13 @@ export class TextTool {
         ? `${plural(countWords(this.pages.join(" ")), "word")} · ${plural(this.pages.length, "page")}`
         : "";
     for (const b of [this.goBtn, this.copyBtn]) b.disabled = !src || !hasText;
+    this.root.querySelectorAll<HTMLButtonElement>("[data-format]").forEach((b) => {
+      b.setAttribute("aria-checked", String(b.dataset.format === this.format));
+    });
+    // Markdown always reflows paragraphs, so the option only applies to plain text.
+    q("[data-reflow-opt]").hidden = this.format === "markdown";
+    this.output.classList.toggle("mono", this.format === "markdown");
+    q("[data-ext]").textContent = this.format === "markdown" ? " .md" : " .txt";
     this.goBtn.title = !src ? "Choose a PDF first" : !hasText ? "This PDF has no text to save" : "Download (Ctrl S)";
   }
 }

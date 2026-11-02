@@ -13,15 +13,19 @@ export { pdfjs };
 
 /**
  * Open a PDF from bytes. `askPassword` is called for protected files; resolve
- * with null to cancel. The caller's buffer is copied because pdf.js transfers
- * (and detaches) whatever it's given.
+ * with null to cancel. `fontNames` keeps font names around for text styling.
+ * The caller's buffer is copied because pdf.js transfers (and detaches)
+ * whatever it's given.
  */
 export function openPdf(
   bytes: Uint8Array,
   askPassword: (wrongPassword: boolean) => Promise<string | null>,
+  opts: { fontNames?: boolean } = {},
 ): Promise<{ doc: PDFDocumentProxy; password: string | null }> {
   let password: string | null = null;
   const task = pdfjs.getDocument({
+    // Keeps each font's real name (e.g. "Arial-BoldMT"), for spotting bold and italic text.
+    fontExtraProperties: opts.fontNames ?? false,
     data: bytes.slice(),
     cMapUrl: `${assets}cmaps/`,
     cMapPacked: true,

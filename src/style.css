@@ -1277,6 +1277,12 @@ button {
   tab-size: 4;
 }
 
+.text-out.mono {
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  font-size: 13.5px;
+  line-height: 1.65;
+}
+
 @media (max-width: 520px) {
   .parts {
     padding: 16px 12px 96px;

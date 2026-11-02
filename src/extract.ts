@@ -1,16 +1,43 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import type { TextItem, TextMarkedContent } from "pdfjs-dist/types/src/display/api";
 
+/** A stretch of a line in one font style. */
+export interface Run {
+  text: string;
+  bold: boolean;
+  italic: boolean;
+}
+
+export interface Line {
+  text: string;
+  runs: Run[];
+  /** Baseline position, measured perpendicular to the text. */
+  across: number;
+  /** Where the line starts and ends, measured along the text. */
+  start: number;
+  end: number;
+  size: number;
+  ux: number;
+  uy: number;
+  /** A paragraph break comes before this line. */
+  paraBreak: boolean;
+  /** The line split at wide gaps, like columns of a table. One cell for ordinary text. */
+  cells: string[];
+}
+
+export type FontStyle = (fontName: string) => { bold: boolean; italic: boolean };
+const PLAIN: FontStyle = () => ({ bold: false, italic: false });
+
 /**
- * Turn one page's pdf.js text items into plain text.
+ * Turn one page's pdf.js text items into lines, with paragraph breaks marked.
  *
  * pdf.js hands back runs of text with positions but not much structure, so
  * lines, spaces and paragraph breaks are rebuilt from where each run sits.
  * Everything is measured along the text's own direction, so rotated text
  * and rotated pages come out the same as upright ones.
  */
-export function itemsToText(items: ReadonlyArray<TextItem | TextMarkedContent>): string {
-  const lines = toLines(items);
+export function layoutPage(items: ReadonlyArray<TextItem | TextMarkedContent>, style: FontStyle = PLAIN): Line[] {
+  const lines = toLines(items, style);
 
   // Typical distance from one line to the next on this page: the most common
   // drop is the body text's line spacing. Judging gaps against it (not a fixed
@@ -31,25 +58,23 @@ export function itemsToText(items: ReadonlyArray<TextItem | TextMarkedContent>):
     }
   }
 
-  let out = "";
-  lines.forEach((line, i) => {
-    if (i > 0) {
-      out += "\n";
-      const drop = lineDrop(lines[i - 1], line);
-      // A bigger-than-usual drop to the next line starts a new paragraph.
-      if (drop !== null && drop > Math.max(usual * 1.4, Math.min(line.size, lines[i - 1].size) * 1.6)) out += "\n";
-    }
-    out += line.text;
-  });
-  return tidy(out);
+  for (let i = 1; i < lines.length; i++) {
+    const drop = lineDrop(lines[i - 1], lines[i]);
+    // A bigger-than-usual drop to the next line starts a new paragraph.
+    lines[i].paraBreak =
+      drop !== null && drop > Math.max(usual * 1.4, Math.min(lines[i].size, lines[i - 1].size) * 1.6);
+  }
+  return lines;
 }
 
-interface Line {
-  text: string;
-  across: number; // baseline position, measured perpendicular to the text
-  size: number;
-  ux: number;
-  uy: number;
+/** Plain text of a laid-out page. */
+export function layoutText(lines: Line[]): string {
+  return tidy(lines.map((l, i) => (i > 0 && l.paraBreak ? "\n" : "") + l.text).join("\n"));
+}
+
+/** Plain text of one page's items. */
+export function itemsToText(items: ReadonlyArray<TextItem | TextMarkedContent>): string {
+  return layoutText(layoutPage(items));
 }
 
 /** Distance down to the next line, or null when they aren't comparable (different direction, or moving up). */
@@ -60,11 +85,25 @@ function lineDrop(a: Line, b: Line): number | null {
 }
 
 /** Group text runs into lines, adding the spaces the PDF left implicit. */
-function toLines(items: ReadonlyArray<TextItem | TextMarkedContent>): Line[] {
+function toLines(items: ReadonlyArray<TextItem | TextMarkedContent>, style: FontStyle): Line[] {
   const lines: Line[] = [];
+  const sizes = new Map<Line, Map<number, number>>();
   let line: Line | null = null;
-  let end = 0; // where the previous run stopped, along the text
   let forceBreak = false;
+
+  const append = (l: Line, text: string, fontName: string) => {
+    const { bold, italic } = style(fontName);
+    const last = l.runs[l.runs.length - 1];
+    if (last && last.bold === bold && last.italic === italic) last.text += text;
+    else l.runs.push({ text, bold, italic });
+    l.text += text;
+    l.cells[l.cells.length - 1] += text;
+  };
+  const count = (l: Line, size: number, n: number) => {
+    const m = sizes.get(l)!;
+    const k = Math.round(size * 2) / 2;
+    m.set(k, (m.get(k) ?? 0) + n);
+  };
 
   for (const raw of items) {
     if (!("str" in raw)) continue;
@@ -91,19 +130,42 @@ function toLines(items: ReadonlyArray<TextItem | TextMarkedContent>): Line[] {
 
     if (line && sameLine) {
       // A visible gap between runs is a space the PDF didn't write out.
-      const gap = along - end;
-      if (gap > Math.min(size, line.size) * 0.15 && !/\s$/.test(line.text) && !/^\s/.test(item.str)) line.text += " ";
-      line.text += item.str;
-      line.size = Math.max(line.size, size);
+      const gap = along - line.end;
+      if (gap > Math.min(size, line.size) * 0.15 && !/\s$/.test(line.text) && !/^\s/.test(item.str)) {
+        append(line, " ", item.fontName);
+      }
+      // A wide gap separates columns.
+      if (gap > Math.min(size, line.size) && item.str.trim()) line.cells.push("");
+      append(line, item.str, item.fontName);
     } else {
-      line = { text: item.str, across, size, ux, uy };
+      line = { text: "", runs: [], across, start: along, end: along, size, ux, uy, paraBreak: false, cells: [""] };
+      sizes.set(line, new Map());
+      append(line, item.str, item.fontName);
       lines.push(line);
     }
-    end = along + Math.abs(item.width);
+    count(line, size, item.str.trim().length);
+    // pdf.js fills gaps with space items as wide as the gap; they don't count
+    // as where the text ends, or columns would look joined up.
+    if (item.str.trim()) line.end = Math.max(line.end, along + Math.abs(item.width));
     forceBreak = item.hasEOL;
   }
-  for (const l of lines) l.text = l.text.replace(/[ \t]+$/, "");
-  return lines;
+  for (const l of lines) {
+    // A line's size is the one most of its characters are set in, so a big
+    // bullet or drop cap doesn't make it look like a heading.
+    let most = -1;
+    for (const [size, n] of sizes.get(l)!) {
+      if (n > most) {
+        l.size = size;
+        most = n;
+      }
+    }
+    l.cells = l.cells.map((c) => c.trim()).filter((c) => c);
+    if (!l.cells.length) l.cells = [""];
+    l.text = l.text.replace(/[ \t]+$/, "");
+    const last = l.runs[l.runs.length - 1];
+    if (last) last.text = last.text.replace(/[ \t]+$/, "");
+  }
+  return lines.filter((l) => l.text.trim());
 }
 
 /** Trim line ends, drop stray control characters, and cap blank runs at one line. */
@@ -116,20 +178,60 @@ function tidy(text: string): string {
     .trim();
 }
 
-/** Text of every page, in order. Pages without a text layer come back as "". */
+/**
+ * Lay out every page, in order. Pages without a text layer come back empty.
+ * With `fonts`, bold and italic are picked up from font names (which costs
+ * parsing each page's drawing commands, so only Markdown asks for it).
+ */
 export async function extractPages(
   doc: PDFDocumentProxy,
-  onProgress?: (done: number, total: number) => void,
-): Promise<string[]> {
-  const pages: string[] = [];
+  opts: { fonts?: boolean; onProgress?: (done: number, total: number) => void } = {},
+): Promise<Line[][]> {
+  const pages: Line[][] = [];
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
-    pages.push(itemsToText(content.items));
+    let style = PLAIN;
+    if (opts.fonts && content.items.some((it) => "str" in it && it.str.trim())) {
+      try {
+        // Loads the page's fonts, so their real names can be looked up.
+        await page.getOperatorList();
+        style = (name) => fontStyle(fontName(page.commonObjs, name));
+      } catch {
+        // No styles, then.
+      }
+    }
+    pages.push(layoutPage(content.items, style));
     page.cleanup();
-    onProgress?.(i, doc.numPages);
+    opts.onProgress?.(i, doc.numPages);
   }
   return pages;
+}
+
+function fontName(objs: { has(id: string): boolean; get(id: string): unknown }, id: string): string {
+  try {
+    if (!objs.has(id)) return "";
+    const font = objs.get(id) as { name?: unknown } | null;
+    return typeof font?.name === "string" ? font.name : "";
+  } catch {
+    return "";
+  }
+}
+
+const styleCache = new Map<string, { bold: boolean; italic: boolean }>();
+
+/** "ABCDEF+Calibri-BoldItalic" -> bold and italic. */
+export function fontStyle(name: string): { bold: boolean; italic: boolean } {
+  let s = styleCache.get(name);
+  if (!s) {
+    const n = name.replace(/^[A-Z]{6}\+/, "");
+    s = {
+      bold: /bold|black|heavy|semibold|demi|extrab|ultrab|[-,_ ](bd|sb)\b/i.test(n),
+      italic: /italic|oblique|[-,_ ](it|obl)\b/i.test(n),
+    };
+    styleCache.set(name, s);
+  }
+  return s;
 }
 
 export interface JoinOptions {
