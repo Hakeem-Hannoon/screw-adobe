@@ -5,9 +5,9 @@
   "description": "Private, in-browser PDF tools: redact, merge, split, rotate, number pages, convert to text or Markdown, and turn images into PDFs.",
   "type": "module",
   "scripts": {
-    "predev": "node scripts/copy-pdfjs-assets.mjs",
+    "predev": "node scripts/copy-pdfjs-assets.mjs && node scripts/copy-ocr-assets.mjs",
     "dev": "vite",
-    "prebuild": "node scripts/copy-pdfjs-assets.mjs",
+    "prebuild": "node scripts/copy-pdfjs-assets.mjs && node scripts/copy-ocr-assets.mjs",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit"
@@ -15,8 +15,10 @@
   "license": "MIT",
   "dependencies": {
     "@fontsource-variable/public-sans": "^5.3.0",
+    "@tesseract.js-data/eng": "^1.0.0",
     "pdf-lib": "^1.17.1",
-    "pdfjs-dist": "^6.4.299"
+    "pdfjs-dist": "^6.4.299",
+    "tesseract.js": "^7.0.0"
   },
   "devDependencies": {
     "typescript": "~5.9.3",
