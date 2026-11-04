@@ -61,10 +61,11 @@ export interface Table extends Placed {
 export type Block = Heading | Paragraph | ListItem | Table;
 
 const round = (n: number) => Math.round(n * 2) / 2;
-const BULLET = /^\s*([•●○◦▪▫■□‣⁃∙·\u2013\u2014*+-])\s+/;
+// Includes the private-use bullets Word's Symbol and Wingdings fonts leave behind.
+const BULLET = /^\s*([•●○◦▪▫■□‣⁃∙·\u2013\u2014*+\uf0b7\uf0a7\uf0d8\uf076\uf0fc-])\s+/;
 const NUMBERED = /^\s*(\d{1,3}|[a-z]|[ivx]{1,4})([.)])\s+/;
 /** A cell that's only a list marker: "•", "3", "3.", "c)". Set apart by a gap, a bare number counts too. */
-const MARKER_CELL = /^([•●○◦▪▫■□‣⁃∙·\u2013\u2014*+-]|\d{1,3}[.)]?|[a-z][.)]|[ivx]{1,4}[.)])$/;
+const MARKER_CELL = /^([•●○◦▪▫■□‣⁃∙·\u2013\u2014*+\uf0b7\uf0a7\uf0d8\uf076\uf0fc-]|\d{1,3}[.)]?|[a-z][.)]|[ivx]{1,4}[.)])$/;
 
 /** "1  Open the file" with a gap after the number: a list item even without "1.". */
 const markerLine = (l: Line) => l.cells.length === 2 && MARKER_CELL.test(l.cells[0]);
