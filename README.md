@@ -1,6 +1,6 @@
 # HackerPDF
 
-Black out or white out anything in a PDF, then download a clean copy. Merge, split, rotate and number PDFs, pull out their text, or turn images into a PDF, too. Runs entirely in your browser: your files are never uploaded anywhere.
+Black out or white out anything in a PDF, then download a clean copy. Merge, split, rotate, sign and number PDFs, convert between PDF and Word, pull out their text, or turn pages into images and images into PDFs, too. Runs entirely in your browser: your files are never uploaded anywhere.
 
 **Live:** https://hakeem-hannoon.github.io/screw-adobe/
 
@@ -15,7 +15,11 @@ Black out or white out anything in a PDF, then download a clean copy. Merge, spl
 - **Merge PDFs:** add several files, drag them into order, download one PDF. Drop two or more PDFs on the page to start a merge.
 - **Split a PDF:** click between pages to cut, or cut every N pages. Untick any part you don't want. One part downloads as a PDF; several come as a ZIP.
 - **PDF to text:** pull all the text out of a PDF as plain text (`.txt`) or **Markdown** (`.md`), or copy it. Markdown picks up headings from font sizes, bulleted and numbered lists, tables, and bold and italic text. Scanned pages can be read with OCR right there. Optionally mark where each page starts, or (for plain text) join wrapped lines so paragraphs reflow wherever you paste them. Scanned PDFs have no text to pull out (they're pictures of letters), and the tool tells you when that's the case.
-- **Sign:** pick a colour (black, ballpoint blue or dark blue), pick a style (your name in one of 20 handwriting fonts: three Showpiece styles with a calligraphic swash, plus natural and fancy ones; or draw it with a mouse or finger, with strokes that thin and thicken like real ink), then click where it goes. Drag to move, pull the corner to resize, sign in as many places as you like. The original file is kept intact, form fields included. This is a visual signature, not a certificate-based digital signature.
+- **Sign:** pick a colour (black, ballpoint blue or dark blue), pick a style (your name in one of 20 handwriting fonts: three Showpiece styles with a calligraphic swash, plus natural and fancy ones; or draw it with a mouse or finger, with strokes that thin and thicken like real ink), then click where it goes. Drag to move, pull the corner to resize, sign in as many places as you like. The original file is kept intact, form fields included. Tick **Multiple pages?** to sign several pages at once: choose the pages (or type them, like `1-3, 7` or `all`), place the signature once, and it goes on every one of them. Moving or resizing any copy moves them all; ticking or unticking a page adds or removes its copy. This is a visual signature, not a certificate-based digital signature.
+- **PDF to Word:** turn one PDF or a whole batch into editable Word documents (`.docx`; several come as a ZIP). Headings, paragraphs, bold and italic, bulleted and numbered lists and tables come across as real Word ones, so text reflows as you edit; pictures land where they sat on the page; a running header or footer becomes a Word header or footer with a live page number. Scanned pages can be read with OCR. **Exact look** makes each page a picture instead, for forms and layouts that must not move. The `.docx` carries no author or app metadata.
+- **Word to PDF:** turn Word documents (`.docx`) into PDFs with real, selectable text, one or a batch (separate PDFs in a ZIP, or **combined into one**). Markdown and plain-text files work too. Fonts, line spacing, lists, tables, pictures, headers and footers (with page numbers) and links come across, and pages break between lines, keeping headings with what follows. Old `.doc` files need saving as `.docx` first; text in scripts other than Latin, Greek and Cyrillic isn't drawn yet.
+- **Continue with:** after Word to PDF, Merge or Images to PDF, open the result straight in Redact, Sign, Page numbers, Merge, Split, Organize, Rotate or Compress, without downloading it and choosing it again.
+- **PDF to images:** save every page of one or more PDFs as PNG or JPG, at screen, standard or print resolution (96, 150 or 300 dpi). One page downloads as an image; more come as a ZIP, with a folder per PDF. Click a page in the preview to save just that one.
 - **Images to PDF:** turn photos, scans or screenshots (JPEG, PNG, WebP, GIF, SVG, and HEIC in Safari) into one PDF, one image per page. Drag them into order, pick Letter, A4 or pages that fit each image, with or without margins. Drop images on the home screen to start.
 - **Page numbers:** pick where the number goes by clicking on a blank page, then preview your real pages with the numbers on before downloading. Choose `1`, `Page 1`, `1 / 12` or `Page 1 of 12`, three sizes, and whether to skip the first page (it still counts). Works on rotated pages too.
 - **Rotate:** click a page to turn it right (Shift-click for left), or turn every page at once. Turning only changes how each page is displayed, so nothing on it is re-rendered.
@@ -44,9 +48,13 @@ Merged, split, organized, rotated and numbered files are built the same way as u
 
 Photos carry hidden metadata: often the GPS location they were taken at, the time, and the phone's make and serial number. Images to PDF leaves all of it out. JPEGs are copied without re-compressing, minus their metadata; sideways phone photos are turned upright.
 
+### How Word to PDF keeps the layout
+
+The document is laid out by the browser ([docx-preview](https://github.com/VolodymyrBaydalka/docxjs)) in fonts that are metric-compatible with Office's: [Carlito](https://fonts.google.com/specimen/Carlito) for Calibri, [Caladea](https://fonts.google.com/specimen/Caladea) for Cambria, [Arimo](https://fonts.google.com/specimen/Arimo) for Arial, [Tinos](https://fonts.google.com/specimen/Tinos) for Times New Roman and [Cousine](https://fonts.google.com/specimen/Cousine) for Courier New, so lines break where they would in Word. Then every word, picture, background and border is drawn into the PDF where it landed, using the same font files. Other fonts are swapped for the closest of these five.
+
 ## Privacy
 
-There's no backend. The production build ships a Content-Security-Policy with `connect-src 'self'`, so the page can't send your file to any other server even if it wanted to. Fonts, pdf.js assets and the OCR engine and its language model are self-hosted; nothing loads from a third party.
+There's no backend. The production build ships a Content-Security-Policy with `connect-src 'self'`, so the page can't send your file to any other server even if it wanted to. Fonts (including the document fonts in `public/fonts`, under the SIL Open Font License), pdf.js assets and the OCR engine and its language model are self-hosted; nothing loads from a third party. The Word to PDF converter is only fetched the first time you use it.
 
 ## Keyboard shortcuts
 
@@ -60,7 +68,7 @@ There's no backend. The production build ships a Content-Security-Policy with `c
 | `Ctrl/⌘ Z`, `Ctrl/⌘ Shift Z` | Undo, redo |
 | `Ctrl/⌘ F` | Find text to cover |
 | `Ctrl/⌘ +`, `-`, `0` | Zoom in, out, fit width |
-| `Ctrl/⌘ S` | Download (also in Merge, Split and PDF to text) |
+| `Ctrl/⌘ S` | Download (also in the other tools) |
 
 ## Develop
 
@@ -71,7 +79,7 @@ npm run build    # type-check + production build into dist/
 npm run preview  # serve dist/ (with the production CSP)
 ```
 
-Built with [pdf.js](https://mozilla.github.io/pdf.js/) for rendering and text search, [pdf-lib](https://pdf-lib.js.org/) for writing the output, [Tesseract.js](https://tesseract.projectnaptha.com/) for OCR, Vite, and TypeScript. No framework.
+Built with [pdf.js](https://mozilla.github.io/pdf.js/) for rendering and text search, [pdf-lib](https://pdf-lib.js.org/) (with its fontkit) for writing the output, [Tesseract.js](https://tesseract.projectnaptha.com/) for OCR, [docx-preview](https://github.com/VolodymyrBaydalka/docxjs) and [JSZip](https://stuk.github.io/jszip/) for reading Word files, [marked](https://marked.js.org/) for Markdown, Vite, and TypeScript. No framework.
 
 ## Deploy
 

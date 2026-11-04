@@ -20,6 +20,15 @@ export const icons = {
     '<path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7z"/><path d="M14 3v4h4M9 12h6M9 15.5h6M9 9h2"/>',
   ),
   image: svg('<rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><circle cx="9" cy="10" r="1.75"/><path d="m4 18 5.5-5 3.5 3 2.5-2 4.5 4"/>'),
+  word: svg(
+    '<path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7z"/><path d="M14 3v4h4M8.75 11l1.25 6 2-4.5 2 4.5 1.25-6"/>',
+  ),
+  toPdf: svg(
+    '<path d="M14 3H7a1 1 0 0 0-1 1v16a1 1 0 0 0 1 1h10a1 1 0 0 0 1-1V7z"/><path d="M14 3v4h4M12 10v7M9 14l3 3 3-3"/>',
+  ),
+  images: svg(
+    '<rect x="7.5" y="3.5" width="13" height="13" rx="1.5"/><path d="M4.5 7.5v11a2 2 0 0 0 2 2h11"/><circle cx="12" cy="8.25" r="1.25"/><path d="m8 15.5 3.5-3.5 2.5 2 2-1.5 4 3.5"/>',
+  ),
   hash: svg('<path d="M9 4 7 20M17 4l-2 16M4.5 9h15M3.5 15h15"/>'),
   rotate: svg('<path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/>'),
   rotateLeft: svg('<path d="M4 12a8 8 0 1 0 2.34-5.66"/><path d="M4 4v5h5"/>'),

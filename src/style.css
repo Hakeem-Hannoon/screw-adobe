@@ -2170,6 +2170,53 @@ button {
   cursor: crosshair;
 }
 
+/* multiple pages */
+
+.sg-cap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sg-check {
+  display: none;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--marquee);
+}
+
+.sg-pages.multi .sg-check {
+  display: inline-block;
+}
+
+.sg-pages.multi .sg-cap {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 560;
+}
+
+.sg-pages.multi .sg-fig:has(.sg-check:not(:checked)) .sg-page {
+  opacity: 0.55;
+}
+
+.every .sg-page-list {
+  width: 120px;
+}
+
+.sg-page-list[aria-invalid="true"] {
+  border-color: #c4291c;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .sg-layer {
   position: absolute;
   inset: 0;
@@ -2308,4 +2355,395 @@ button {
   .toast {
     animation: none;
   }
+}
+
+/* ------------------------------------------------- conversions (batches) */
+
+.batch-row {
+  padding-left: 8px;
+}
+
+.batch-row.selectable {
+  cursor: pointer;
+}
+
+.batch-row.selected {
+  border-color: var(--marquee);
+  box-shadow: 0 0 0 1px var(--marquee);
+}
+
+.row-name-btn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-weight: 560;
+  text-align: left;
+  cursor: pointer;
+}
+
+.row-meta.error {
+  color: #c4291c;
+}
+
+:root[data-theme="dark"] .row-meta.error {
+  color: #ff8a7a;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex: none;
+}
+
+.preview-head {
+  margin: 28px 0 10px;
+  color: var(--graphite);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.page-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.page-grid .thumb-sheet,
+.page-grid .page-pick {
+  border-radius: 2px;
+}
+
+.page-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: var(--graphite);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+
+.page-pick:hover,
+.page-pick:focus-visible {
+  border-color: var(--rule);
+  background: var(--hover);
+  color: var(--text);
+}
+
+/* A page of the Word document, roughly as Word shows it. */
+.doc-paper {
+  --body: 11px;
+  padding: 48px 56px;
+  background: #fff;
+  color: #000;
+  border-radius: 4px;
+  box-shadow: var(--paper-shadow);
+  font-family: Calibri, Carlito, "Segoe UI", system-ui, sans-serif;
+  font-size: calc(var(--body) * 1.36);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.doc-paper h2,
+.doc-paper h3,
+.doc-paper h4 {
+  margin: 1.2em 0 0.4em;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.doc-paper h2 {
+  font-size: 1.7em;
+}
+
+.doc-paper h3 {
+  font-size: 1.35em;
+}
+
+.doc-paper h4 {
+  font-size: 1.12em;
+}
+
+.doc-paper > :first-child {
+  margin-top: 0;
+}
+
+.doc-paper p {
+  margin: 0 0 0.75em;
+}
+
+.doc-paper ul,
+.doc-paper ol {
+  margin: 0 0 0.75em;
+  padding-left: 1.6em;
+}
+
+.doc-paper table {
+  margin: 0 0 0.9em;
+  border-collapse: collapse;
+  width: 100%;
+}
+
+.doc-paper td {
+  padding: 3px 7px;
+  border: 1px solid #000;
+  vertical-align: top;
+}
+
+.doc-paper figure {
+  margin: 0 0 0.9em;
+  text-align: center;
+}
+
+.doc-paper img {
+  max-width: 100%;
+  height: auto;
+}
+
+.doc-paper .doc-band {
+  margin: -24px 0 24px;
+  color: #595959;
+  font-size: 0.8em;
+}
+
+.doc-paper .doc-band.foot {
+  margin: 28px 0 -24px;
+}
+
+.doc-paper .doc-band p {
+  margin: 0;
+}
+
+.doc-paper .page-break {
+  margin: 24px -56px;
+  border: 0;
+  border-top: 1px dashed #b8bec6;
+}
+
+@media (max-width: 520px) {
+  .doc-paper {
+    padding: 28px 20px;
+  }
+  .doc-paper .page-break {
+    margin: 20px -20px;
+  }
+}
+
+/* "Continue with" */
+
+.handoff {
+  position: relative;
+}
+
+.handoff-menu {
+  width: 240px;
+  padding: 6px;
+  z-index: 30;
+}
+
+.menu-head {
+  margin: 4px 8px 6px;
+  color: var(--graphite);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--hover);
+}
+
+.menu-item svg {
+  color: var(--graphite);
+  flex: none;
+}
+
+/* ------------------------------------------- documents laid out for PDF */
+
+/* Offscreen, but laid out for real so every word can be measured. */
+.doc-render-host {
+  position: fixed;
+  top: 0;
+  left: -40000px;
+  pointer-events: none;
+}
+
+/* Our PDF text has no kerning or ligatures, so the layout mustn't either. */
+.doc-render-host,
+.doc-render-host * {
+  font-kerning: none !important;
+  font-variant-ligatures: none !important;
+  font-feature-settings: "kern" 0, "liga" 0, "clig" 0, "calt" 0 !important;
+  hyphens: manual !important;
+}
+
+.doc-render-host .hpdfdoc-wrapper {
+  padding: 0;
+  background: none;
+}
+
+.doc-render-host .hpdfdoc-wrapper > section.hpdfdoc {
+  margin: 0 0 20px;
+  box-shadow: none;
+  font-family: HpdfCarlito;
+}
+
+.hpdf-no-marker::before {
+  content: none !important;
+  display: none !important;
+}
+
+.doc-text-page {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+  background: #fff;
+  color: #000;
+  font-family: HpdfCarlito;
+  font-size: 11pt;
+  line-height: 1.4;
+}
+
+.doc-text-page.txt pre {
+  margin: 0;
+  font-family: HpdfCousine;
+  font-size: 9.5pt;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.doc-text-page.md h1,
+.doc-text-page.md h2,
+.doc-text-page.md h3,
+.doc-text-page.md h4,
+.doc-text-page.md h5,
+.doc-text-page.md h6 {
+  margin: 14pt 0 6pt;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.doc-text-page.md h1 {
+  margin-top: 0;
+  font-size: 22pt;
+}
+
+.doc-text-page.md h2 {
+  font-size: 16pt;
+}
+
+.doc-text-page.md h3 {
+  font-size: 13pt;
+}
+
+.doc-text-page.md h4,
+.doc-text-page.md h5,
+.doc-text-page.md h6 {
+  font-size: 11pt;
+}
+
+.doc-text-page.md p,
+.doc-text-page.md ul,
+.doc-text-page.md ol,
+.doc-text-page.md table,
+.doc-text-page.md pre,
+.doc-text-page.md blockquote {
+  margin: 0 0 8pt;
+}
+
+.doc-text-page.md ul,
+.doc-text-page.md ol {
+  padding-left: 20pt;
+}
+
+.doc-text-page.md li {
+  margin: 0 0 2pt;
+}
+
+.doc-text-page.md li > p {
+  margin: 0 0 2pt;
+}
+
+.doc-text-page.md code {
+  padding: 0 2pt;
+  background: #eff1f3;
+  font-family: HpdfCousine;
+  font-size: 9.5pt;
+}
+
+.doc-text-page.md pre {
+  padding: 8pt 10pt;
+  background: #f4f6f8;
+  font-size: 9.5pt;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.doc-text-page.md pre code {
+  padding: 0;
+  background: none;
+}
+
+.doc-text-page.md blockquote {
+  padding-left: 10pt;
+  border-left: 3pt solid #d3d8de;
+  color: #4a5058;
+}
+
+.doc-text-page.md table {
+  border-collapse: collapse;
+}
+
+.doc-text-page.md th,
+.doc-text-page.md td {
+  padding: 3pt 7pt;
+  border: 0.75pt solid #b9c0c8;
+  text-align: left;
+  vertical-align: top;
+}
+
+.doc-text-page.md th {
+  background: #eff1f3;
+}
+
+.doc-text-page.md hr {
+  margin: 12pt 0;
+  border: 0;
+  border-top: 0.75pt solid #b9c0c8;
+}
+
+.doc-text-page.md a {
+  color: #1a4fd6;
+  text-decoration: underline;
+}
+
+.doc-text-page.md img {
+  max-width: 100%;
 }

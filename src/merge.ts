@@ -1,4 +1,5 @@
 import { buildPdfs } from "./combine";
+import { handoffButton, type HandoffTarget } from "./handoff";
 import { icons } from "./icons";
 import { makeSortable } from "./reorder";
 import { closeSource, loadSource, type PdfSource } from "./source";
@@ -7,6 +8,8 @@ import { baseName, isPdf, saveFile, showBusy, toast } from "./ui";
 
 export interface ToolHost {
   goHome(): void;
+  /** Open finished PDFs in another tool, without a download and upload in between. */
+  openIn(target: HandoffTarget, files: File[]): void;
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
@@ -37,7 +40,7 @@ export class MergeTool {
           </button>
           <span class="filename" data-summary></span>
         </div>
-        <div class="tb-group tb-right">
+        <div class="tb-group tb-right" data-actions>
           <button type="button" class="btn primary" data-go title="Download (Ctrl S)">${icons.download}<span>Download<span class="lbl"> merged PDF</span></span></button>
         </div>
       </header>
@@ -64,6 +67,14 @@ export class MergeTool {
     this.addBtn = q<HTMLButtonElement>("[data-add]");
     this.thumbs = new Thumbs(this.scroller, { w: 44, h: 56 });
 
+    q("[data-actions]").prepend(
+      handoffButton({
+        label: "Continue with",
+        count: () => 1,
+        exclude: ["merge"],
+        pick: (t) => void this.handoff(t),
+      }),
+    );
     q("[data-home]").addEventListener("click", () => this.host.goHome());
     this.addBtn.addEventListener("click", () => this.pick());
     this.goBtn.addEventListener("click", () => void this.download());
@@ -156,6 +167,24 @@ export class MergeTool {
     }
   }
 
+  /** Merge, then open the result in another tool instead of downloading it. */
+  private async handoff(target: HandoffTarget): Promise<void> {
+    if (this.files.length < 2) return;
+    const files = [...this.files];
+    const pages = files.flatMap((src) => src.sizes.map((_, index) => ({ src, index })));
+    showBusy("Merging");
+    try {
+      const [res] = await buildPdfs([pages], (done, total) => showBusy(`Adding page ${done} of ${total}`));
+      showBusy(null);
+      const name = `${baseName(files[0].name)}-merged.pdf`;
+      this.host.openIn(target, [new File([res.bytes as BlobPart], name, { type: "application/pdf" })]);
+    } catch (err) {
+      console.error(err);
+      showBusy(null);
+      toast("The merged PDF couldn't be made.", "One of the files may be damaged. Try removing it and merging again.");
+    }
+  }
+
   // ---------------------------------------------------------------- rows
 
   private row(src: PdfSource): HTMLLIElement {
@@ -230,5 +259,6 @@ export class MergeTool {
     this.addBtn.classList.toggle("lg", n === 0);
     this.goBtn.disabled = n < 2;
     this.goBtn.title = n < 2 ? "Add at least two PDFs" : "Download (Ctrl S)";
+    this.root.querySelector<HTMLElement>(".handoff")!.hidden = n < 2;
   }
 }

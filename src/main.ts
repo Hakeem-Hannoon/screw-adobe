@@ -21,6 +21,11 @@ import { CompareTool } from "./comparetool";
 import { OcrTool } from "./ocrtool";
 import { stopEngine } from "./ocr";
 import { SignTool } from "./signtool";
+import { WordTool } from "./wordtool";
+import { ToPdfTool } from "./topdftool";
+import { PdfImagesTool } from "./pdfimagestool";
+import { documentKind } from "./dockind";
+import type { HandoffTarget } from "./handoff";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
 
 // ------------------------------------------------------------------ markup
@@ -43,9 +48,12 @@ app.innerHTML = `
       <button type="button" class="tool-link" id="go-compress">${icons.compress}<span>Compress</span></button>
       <button type="button" class="tool-link" id="go-numbers">${icons.hash}<span>Page numbers</span></button>
       <button type="button" class="tool-link" id="go-compare">${icons.compare}<span>Compare</span></button>
+      <button type="button" class="tool-link" id="go-word">${icons.word}<span>PDF to Word</span></button>
+      <button type="button" class="tool-link" id="go-topdf">${icons.toPdf}<span>Word to PDF</span></button>
+      <button type="button" class="tool-link" id="go-pdfimages">${icons.images}<span>PDF to images</span></button>
+      <button type="button" class="tool-link" id="go-images">${icons.image}<span>Images to PDF</span></button>
       <button type="button" class="tool-link" id="go-text">${icons.fileText}<span>PDF to text</span></button>
       <button type="button" class="tool-link" id="go-ocr">${icons.scan}<span>Make searchable</span></button>
-      <button type="button" class="tool-link" id="go-images">${icons.image}<span>Images to PDF</span></button>
     </nav>
   </div>
   <input type="file" id="file-input" accept="application/pdf,.pdf" hidden />
@@ -178,22 +186,48 @@ let findMatches: Match[] = [];
 let findCursor = -1;
 let activePreset: Preset | null = null;
 
-type Mode = "home" | "editor" | "merge" | "split" | "text" | "images" | "numbers" | "rotate" | "organize" | "compress" | "compare" | "ocr" | "sign";
+type Mode =
+  | "home"
+  | "editor"
+  | "merge"
+  | "split"
+  | "text"
+  | "images"
+  | "numbers"
+  | "rotate"
+  | "organize"
+  | "compress"
+  | "compare"
+  | "ocr"
+  | "sign"
+  | "word"
+  | "topdf"
+  | "pdfimages";
 type ToolMode = Exclude<Mode, "home" | "editor">;
 let mode: Mode = "home";
 const HOME_TITLE = "HackerPDF: redact, merge, split and convert PDFs";
-const merge = new MergeTool(app, { goHome });
-const split = new SplitTool(app, { goHome });
-const text = new TextTool(app, { goHome });
-const images = new ImageTool(app, { goHome });
-const numbers = new NumberTool(app, { goHome });
-const rotate = new RotateTool(app, { goHome });
-const organize = new OrganizeTool(app, { goHome });
-const compress = new CompressTool(app, { goHome });
-const compare = new CompareTool(app, { goHome });
-const ocr = new OcrTool(app, { goHome });
-const sign = new SignTool(app, { goHome });
-const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare, ocr, sign } satisfies Record<ToolMode, unknown>;
+const host = { goHome, openIn };
+const merge = new MergeTool(app, host);
+const split = new SplitTool(app, host);
+const text = new TextTool(app, host);
+const images = new ImageTool(app, host);
+const numbers = new NumberTool(app, host);
+const rotate = new RotateTool(app, host);
+const organize = new OrganizeTool(app, host);
+const compress = new CompressTool(app, host);
+const compare = new CompareTool(app, host);
+const ocr = new OcrTool(app, host);
+const sign = new SignTool(app, host);
+const word = new WordTool(app, host);
+const topdf = new ToPdfTool(app, host);
+const pdfimages = new PdfImagesTool(app, host);
+const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare, ocr, sign, word, topdf, pdfimages } satisfies Record<
+  ToolMode,
+  unknown
+>;
+/** Tools that take several files at once; the rest take one. */
+const MULTI = new Set<ToolMode>(["merge", "images", "compare", "word", "topdf", "pdfimages"]);
+const isMulti = (m: Mode): m is "merge" | "images" | "compare" | "word" | "topdf" | "pdfimages" => MULTI.has(m as ToolMode);
 
 // ----------------------------------------------------------------- helpers
 
@@ -274,34 +308,21 @@ function setMode(next: Mode): void {
   mode = next;
   home.hidden = next !== "home";
   editor.hidden = next !== "editor";
-  merge.root.hidden = next !== "merge";
-  split.root.hidden = next !== "split";
-  text.root.hidden = next !== "text";
-  images.root.hidden = next !== "images";
-  numbers.root.hidden = next !== "numbers";
-  rotate.root.hidden = next !== "rotate";
-  organize.root.hidden = next !== "organize";
-  compress.root.hidden = next !== "compress";
-  compare.root.hidden = next !== "compare";
-  ocr.root.hidden = next !== "ocr";
-  sign.root.hidden = next !== "sign";
+  for (const [name, tool] of Object.entries(tools)) tool.root.hidden = next !== name;
   if (next === "home") document.title = HOME_TITLE;
 }
 
 function goHome(): void {
-  merge.close();
-  split.close();
-  text.close();
-  images.close();
-  numbers.close();
-  rotate.close();
-  organize.close();
-  compress.close();
-  compare.close();
-  ocr.close();
-  sign.close();
+  for (const tool of Object.values(tools)) tool.close();
   void stopEngine();
   setMode("home");
+}
+
+/** Hand finished PDFs straight to another tool, no download and upload in between. */
+function openIn(target: HandoffTarget, files: File[]): void {
+  goHome();
+  if (target === "editor") void openFile(files[0]);
+  else startTool(target, target === "merge" ? files : files.slice(0, 1));
 }
 
 /** Switch to one of the tools. With no files, opens the file picker (call from a click). */
@@ -312,7 +333,7 @@ function startTool(tool: ToolMode, files?: File[]): void {
   t.open();
   setMode(tool);
   if (!files) t.pick();
-  else if (tool === "merge" || tool === "images" || tool === "compare") void tools[tool].add(files);
+  else if (isMulti(tool)) void tools[tool].add(files);
   else void tools[tool].load(files[0]);
 }
 
@@ -558,6 +579,9 @@ $("#go-compress").addEventListener("click", () => startTool("compress"));
 $("#go-compare").addEventListener("click", () => startTool("compare"));
 $("#go-ocr").addEventListener("click", () => startTool("ocr"));
 $("#go-sign").addEventListener("click", () => startTool("sign"));
+$("#go-word").addEventListener("click", () => startTool("word"));
+$("#go-topdf").addEventListener("click", () => startTool("topdf"));
+$("#go-pdfimages").addEventListener("click", () => startTool("pdfimages"));
 document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((b) =>
   b.addEventListener("click", () => setTool(b.dataset.tool as Tool)),
 );
@@ -667,6 +691,7 @@ window.addEventListener("dragenter", (e) => {
   const items = Array.from(e.dataTransfer?.items ?? []);
   const many = items.length > 1;
   const onlyImages = items.length > 0 && items.every((it) => it.type.startsWith("image/"));
+  const docs = items.length > 0 && items.every((it) => /wordprocessingml|^text\/(markdown|plain)$/.test(it.type));
   const labels: Record<Mode, string> = {
     merge: "Drop PDFs to add them",
     split: "Drop a PDF to split it",
@@ -679,8 +704,13 @@ window.addEventListener("dragenter", (e) => {
     compare: "Drop one or both PDFs to compare",
     ocr: "Drop a scanned PDF to read it",
     sign: "Drop a PDF to sign it",
+    word: "Drop PDFs to turn them into Word documents",
+    topdf: "Drop Word files to turn them into PDFs",
+    pdfimages: "Drop PDFs to turn their pages into images",
     editor: "Drop your PDF to open it",
-    home: onlyImages
+    home: docs
+      ? `Drop to turn ${many ? "these" : "this"} into ${many ? "PDFs" : "a PDF"}`
+      : onlyImages
       ? many
         ? "Drop to make a PDF from these images"
         : "Drop to turn this image into a PDF"
@@ -707,10 +737,11 @@ window.addEventListener("drop", (e) => {
   dropzone.hidden = true;
   const files = Array.from(e.dataTransfer?.files ?? []);
   if (!files.length) return;
-  if (mode === "merge" || mode === "images" || mode === "compare") void tools[mode].add(files);
+  if (isMulti(mode)) void tools[mode].add(files);
   else if (mode !== "home" && mode !== "editor") void tools[mode].load(files.find(isPdf) ?? files[0]);
   else if (files.filter(isPdf).length > 1) startTool("merge", files);
   else if (!files.some(isPdf) && files.some(isImage)) startTool("images", files);
+  else if (!files.some(isPdf) && files.some((f) => documentKind(f))) startTool("topdf", files);
   else void openFile(files.find(isPdf) ?? files[0]);
 });
 

@@ -1,3 +1,4 @@
+import { handoffButton, type HandoffTarget } from "./handoff";
 import { icons } from "./icons";
 import { imageBaseName, imagesToPdf, isImage, loadImage, type LoadedImage, type Paper } from "./images";
 import type { ToolHost } from "./merge";
@@ -34,7 +35,7 @@ export class ImageTool {
           </button>
           <span class="filename" data-summary></span>
         </div>
-        <div class="tb-group tb-right">
+        <div class="tb-group tb-right" data-actions>
           <button type="button" class="btn primary" data-go title="Download (Ctrl S)">${icons.download}<span>Download<span class="lbl"> PDF</span></span></button>
         </div>
       </header>
@@ -73,6 +74,9 @@ export class ImageTool {
     this.addBtn = q<HTMLButtonElement>("[data-add]");
     this.margin = q<HTMLInputElement>("[data-margin]");
 
+    q("[data-actions]").prepend(
+      handoffButton({ label: "Continue with", count: () => 1, pick: (t) => void this.handoff(t) }),
+    );
     q("[data-home]").addEventListener("click", () => this.host.goHome());
     this.addBtn.addEventListener("click", () => this.pick());
     this.goBtn.addEventListener("click", () => void this.download());
@@ -168,6 +172,25 @@ export class ImageTool {
     }
   }
 
+  /** Make the PDF, then open it in another tool instead of downloading it. */
+  private async handoff(target: HandoffTarget): Promise<void> {
+    if (!this.images.length) return;
+    const images = [...this.images];
+    showBusy("Making your PDF");
+    try {
+      const bytes = await imagesToPdf(images, { paper: this.paper, margin: this.margin.checked }, (done, total) =>
+        showBusy(`Adding image ${done} of ${total}`),
+      );
+      showBusy(null);
+      const name = `${imageBaseName(images[0].file.name)}.pdf`;
+      this.host.openIn(target, [new File([bytes as BlobPart], name, { type: "application/pdf" })]);
+    } catch (err) {
+      console.error(err);
+      showBusy(null);
+      toast("The PDF couldn't be made.", "One of the images may be damaged. Try removing it.");
+    }
+  }
+
   // ---------------------------------------------------------------- rows
 
   private row(image: LoadedImage): HTMLLIElement {
@@ -252,5 +275,6 @@ export class ImageTool {
     this.addBtn.classList.toggle("lg", n === 0);
     this.goBtn.disabled = n === 0;
     this.goBtn.title = n === 0 ? "Add an image first" : "Download (Ctrl S)";
+    this.root.querySelector<HTMLElement>(".handoff")!.hidden = n === 0;
   }
 }
