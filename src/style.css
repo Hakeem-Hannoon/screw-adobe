@@ -2416,6 +2416,28 @@ button {
   border-radius: 2px;
 }
 
+.page-pick {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: none;
+  color: var(--graphite);
+  font: inherit;
+  font-size: var(--fs-xs);
+  cursor: pointer;
+}
+
+.page-pick:hover,
+.page-pick:focus-visible {
+  border-color: var(--rule);
+  background: var(--hover);
+  color: var(--text);
+}
+
 /* A page of the Word document, roughly as Word shows it. */
 .doc-paper {
   --body: 11px;
