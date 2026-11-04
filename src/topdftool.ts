@@ -1,6 +1,6 @@
 import { buildPdfs } from "./combine";
-import { renderPdf } from "./docrender";
-import { documentKind, layOut, unsupportedReason, UnsupportedFile, type Kind, type Paper } from "./docsource";
+import { documentKind, unsupportedReason, UnsupportedFile, type Kind } from "./dockind";
+import type { Paper } from "./docsource";
 import { handoffButton, type HandoffTarget } from "./handoff";
 import { icons } from "./icons";
 import type { ToolHost } from "./merge";
@@ -237,6 +237,8 @@ export class ToPdfTool {
       e.row.setMeta("Making the PDF");
       showBusy(`Making ${pdfName(e.file.name)}`);
       try {
+        // The converter (docx-preview, fonts, pdf-lib's font support) loads on first use.
+        const [{ layOut }, { renderPdf }] = await Promise.all([import("./docsource"), import("./docrender")]);
         const laid = await layOut(e.file, e.kind, this.paper);
         let result;
         try {

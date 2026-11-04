@@ -24,7 +24,7 @@ import { SignTool } from "./signtool";
 import { WordTool } from "./wordtool";
 import { ToPdfTool } from "./topdftool";
 import { PdfImagesTool } from "./pdfimagestool";
-import { documentKind } from "./docsource";
+import { documentKind } from "./dockind";
 import type { HandoffTarget } from "./handoff";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
 
