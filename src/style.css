@@ -2512,3 +2512,169 @@ button {
   color: var(--graphite);
   flex: none;
 }
+
+/* ------------------------------------------- documents laid out for PDF */
+
+/* Offscreen, but laid out for real so every word can be measured. */
+.doc-render-host {
+  position: fixed;
+  top: 0;
+  left: -40000px;
+  pointer-events: none;
+}
+
+/* Our PDF text has no kerning or ligatures, so the layout mustn't either. */
+.doc-render-host,
+.doc-render-host * {
+  font-kerning: none !important;
+  font-variant-ligatures: none !important;
+  font-feature-settings: "kern" 0, "liga" 0, "clig" 0, "calt" 0 !important;
+  hyphens: manual !important;
+}
+
+.doc-render-host .hpdfdoc-wrapper {
+  padding: 0;
+  background: none;
+}
+
+.doc-render-host .hpdfdoc-wrapper > section.hpdfdoc {
+  margin: 0 0 20px;
+  box-shadow: none;
+  font-family: HpdfCarlito;
+}
+
+.hpdf-no-marker::before {
+  content: none !important;
+  display: none !important;
+}
+
+.doc-text-page {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  margin-bottom: 20px;
+  background: #fff;
+  color: #000;
+  font-family: HpdfCarlito;
+  font-size: 11pt;
+  line-height: 1.4;
+}
+
+.doc-text-page.txt pre {
+  margin: 0;
+  font-family: HpdfCousine;
+  font-size: 9.5pt;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.doc-text-page.md h1,
+.doc-text-page.md h2,
+.doc-text-page.md h3,
+.doc-text-page.md h4,
+.doc-text-page.md h5,
+.doc-text-page.md h6 {
+  margin: 14pt 0 6pt;
+  line-height: 1.2;
+  font-weight: 700;
+}
+
+.doc-text-page.md h1 {
+  margin-top: 0;
+  font-size: 22pt;
+}
+
+.doc-text-page.md h2 {
+  font-size: 16pt;
+}
+
+.doc-text-page.md h3 {
+  font-size: 13pt;
+}
+
+.doc-text-page.md h4,
+.doc-text-page.md h5,
+.doc-text-page.md h6 {
+  font-size: 11pt;
+}
+
+.doc-text-page.md p,
+.doc-text-page.md ul,
+.doc-text-page.md ol,
+.doc-text-page.md table,
+.doc-text-page.md pre,
+.doc-text-page.md blockquote {
+  margin: 0 0 8pt;
+}
+
+.doc-text-page.md ul,
+.doc-text-page.md ol {
+  padding-left: 20pt;
+}
+
+.doc-text-page.md li {
+  margin: 0 0 2pt;
+}
+
+.doc-text-page.md li > p {
+  margin: 0 0 2pt;
+}
+
+.doc-text-page.md code {
+  padding: 0 2pt;
+  background: #eff1f3;
+  font-family: HpdfCousine;
+  font-size: 9.5pt;
+}
+
+.doc-text-page.md pre {
+  padding: 8pt 10pt;
+  background: #f4f6f8;
+  font-size: 9.5pt;
+  line-height: 1.35;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.doc-text-page.md pre code {
+  padding: 0;
+  background: none;
+}
+
+.doc-text-page.md blockquote {
+  padding-left: 10pt;
+  border-left: 3pt solid #d3d8de;
+  color: #4a5058;
+}
+
+.doc-text-page.md table {
+  border-collapse: collapse;
+}
+
+.doc-text-page.md th,
+.doc-text-page.md td {
+  padding: 3pt 7pt;
+  border: 0.75pt solid #b9c0c8;
+  text-align: left;
+  vertical-align: top;
+}
+
+.doc-text-page.md th {
+  background: #eff1f3;
+}
+
+.doc-text-page.md hr {
+  margin: 12pt 0;
+  border: 0;
+  border-top: 0.75pt solid #b9c0c8;
+}
+
+.doc-text-page.md a {
+  color: #1a4fd6;
+  text-decoration: underline;
+}
+
+.doc-text-page.md img {
+  max-width: 100%;
+}
