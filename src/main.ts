@@ -21,6 +21,7 @@ import { CompareTool } from "./comparetool";
 import { OcrTool } from "./ocrtool";
 import { stopEngine } from "./ocr";
 import { SignTool } from "./signtool";
+import { WordTool } from "./wordtool";
 import type { HandoffTarget } from "./handoff";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
 
@@ -44,9 +45,10 @@ app.innerHTML = `
       <button type="button" class="tool-link" id="go-compress">${icons.compress}<span>Compress</span></button>
       <button type="button" class="tool-link" id="go-numbers">${icons.hash}<span>Page numbers</span></button>
       <button type="button" class="tool-link" id="go-compare">${icons.compare}<span>Compare</span></button>
+      <button type="button" class="tool-link" id="go-word">${icons.word}<span>PDF to Word</span></button>
+      <button type="button" class="tool-link" id="go-images">${icons.image}<span>Images to PDF</span></button>
       <button type="button" class="tool-link" id="go-text">${icons.fileText}<span>PDF to text</span></button>
       <button type="button" class="tool-link" id="go-ocr">${icons.scan}<span>Make searchable</span></button>
-      <button type="button" class="tool-link" id="go-images">${icons.image}<span>Images to PDF</span></button>
     </nav>
   </div>
   <input type="file" id="file-input" accept="application/pdf,.pdf" hidden />
@@ -192,7 +194,8 @@ type Mode =
   | "compress"
   | "compare"
   | "ocr"
-  | "sign";
+  | "sign"
+  | "word";
 type ToolMode = Exclude<Mode, "home" | "editor">;
 let mode: Mode = "home";
 const HOME_TITLE = "HackerPDF: redact, merge, split and convert PDFs";
@@ -208,13 +211,14 @@ const compress = new CompressTool(app, host);
 const compare = new CompareTool(app, host);
 const ocr = new OcrTool(app, host);
 const sign = new SignTool(app, host);
-const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare, ocr, sign } satisfies Record<
+const word = new WordTool(app, host);
+const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare, ocr, sign, word } satisfies Record<
   ToolMode,
   unknown
 >;
 /** Tools that take several files at once; the rest take one. */
-const MULTI = new Set<ToolMode>(["merge", "images", "compare"]);
-const isMulti = (m: Mode): m is "merge" | "images" | "compare" => MULTI.has(m as ToolMode);
+const MULTI = new Set<ToolMode>(["merge", "images", "compare", "word"]);
+const isMulti = (m: Mode): m is "merge" | "images" | "compare" | "word" => MULTI.has(m as ToolMode);
 
 // ----------------------------------------------------------------- helpers
 
@@ -566,6 +570,7 @@ $("#go-compress").addEventListener("click", () => startTool("compress"));
 $("#go-compare").addEventListener("click", () => startTool("compare"));
 $("#go-ocr").addEventListener("click", () => startTool("ocr"));
 $("#go-sign").addEventListener("click", () => startTool("sign"));
+$("#go-word").addEventListener("click", () => startTool("word"));
 document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((b) =>
   b.addEventListener("click", () => setTool(b.dataset.tool as Tool)),
 );
@@ -687,6 +692,7 @@ window.addEventListener("dragenter", (e) => {
     compare: "Drop one or both PDFs to compare",
     ocr: "Drop a scanned PDF to read it",
     sign: "Drop a PDF to sign it",
+    word: "Drop PDFs to turn them into Word documents",
     editor: "Drop your PDF to open it",
     home: onlyImages
       ? many

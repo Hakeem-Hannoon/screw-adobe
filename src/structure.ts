@@ -65,7 +65,8 @@ const round = (n: number) => Math.round(n * 2) / 2;
 const BULLET = /^\s*([•●○◦▪▫■□‣⁃∙·\u2013\u2014*+\uf0b7\uf0a7\uf0d8\uf076\uf0fc-])\s+/;
 const NUMBERED = /^\s*(\d{1,3}|[a-z]|[ivx]{1,4})([.)])\s+/;
 /** A cell that's only a list marker: "•", "3", "3.", "c)". Set apart by a gap, a bare number counts too. */
-const MARKER_CELL = /^([•●○◦▪▫■□‣⁃∙·\u2013\u2014*+\uf0b7\uf0a7\uf0d8\uf076\uf0fc-]|\d{1,3}[.)]?|[a-z][.)]|[ivx]{1,4}[.)])$/;
+const MARKER_CELL =
+  /^([•●○◦▪▫■□‣⁃∙·\u2013\u2014*+\uf0b7\uf0a7\uf0d8\uf076\uf0fc-]|\d{1,3}[.)]?|[a-z][.)]|[ivx]{1,4}[.)])$/;
 
 /** "1  Open the file" with a gap after the number: a list item even without "1.". */
 const markerLine = (l: Line) => l.cells.length === 2 && MARKER_CELL.test(l.cells[0]);
@@ -267,44 +268,64 @@ function stripMarker(line: Line, length: number): Line {
 }
 
 /**
- * Lines that repeat at the top or bottom of most pages: running headers and
- * footers like a document title or "Page 3 of 9". Digits are ignored when
+ * Lines that repeat at the top or bottom of most pages, apart from the body
+ * text: running headers and footers like a document title or "Page 3 of 9". Digits are ignored when
  * comparing, so page numbers match. Returns, per page, the lines to leave out
- * of the body, plus the header and footer text as it reads on the first page
- * it appears on (with its page number, if any, swapped for "#").
+ * of the body, plus the header and footer as templates: a number that changes
+ * from page to page (the page number) becomes "#", one that stays the same
+ * (a year, the page count) is kept.
  */
-export function runningLines(pages: Line[][]): {
-  skip: Set<Line>[];
-  header: string | null;
-  footer: string | null;
-} {
+export interface Running {
+  /** The text, with the page number as "#". */
+  text: string;
+  /** The line as it first appears, for its position. */
+  line: Line;
+}
+
+export function runningLines(pages: Line[][]): { skip: Set<Line>[]; header: Running[]; footer: Running[] } {
   const skip = pages.map(() => new Set<Line>());
-  const result = { skip, header: null as string | null, footer: null as string | null };
-  const withText = pages.filter((p) => p.length);
-  if (withText.length < 2) return result;
+  const result = { skip, header: [] as Running[], footer: [] as Running[] };
+  const withText = pages.filter((p) => p.length).length;
+  if (withText < 2) return result;
 
   const key = (l: Line) => l.text.replace(/\d+/g, "#").replace(/\s+/g, " ").trim().toLowerCase();
   for (const edge of ["top", "bottom"] as const) {
-    // The outermost two lines on each page, by position.
+    // Up to two lines at the page's edge, set apart from the body by a clear gap.
     const counts = new Map<string, number>();
-    const candidates = pages.map((lines) => {
+    const picks = pages.map((lines) => {
       const sorted = [...lines].sort((a, b) => (edge === "top" ? b.across - a.across : a.across - b.across));
-      const picked = sorted.slice(0, 2);
+      let picked: Line[] = [];
+      for (let k = 0; k < Math.min(2, sorted.length - 1); k++) {
+        const gap = Math.abs(sorted[k].across - sorted[k + 1].across);
+        if (gap > Math.max(sorted[k].size, sorted[k + 1].size) * 1.9) {
+          picked = sorted.slice(0, k + 1);
+          break;
+        }
+      }
       for (const k of new Set(picked.map(key))) counts.set(k, (counts.get(k) ?? 0) + 1);
       return picked;
     });
-    const need = Math.max(2, Math.ceil(withText.length * 0.6));
-    let text: string | null = null;
-    candidates.forEach((picked, i) => {
+    const need = Math.max(2, Math.ceil(withText * 0.6));
+    const seen = new Map<string, Line[]>();
+    picks.forEach((picked, i) => {
       for (const l of picked) {
         const k = key(l);
-        if (k.length < 1 || (counts.get(k) ?? 0) < need) continue;
+        if ((counts.get(k) ?? 0) < need) continue;
         skip[i].add(l);
-        text ??= l.text.trim().replace(/\d+/g, (d) => (/^(page\s*)?#/i.test(key(l)) || k === "#" ? "#" : d));
+        seen.set(k, [...(seen.get(k) ?? []), l]);
       }
     });
-    if (edge === "top") result.header = text;
-    else result.footer = text;
+    if (!seen.size) continue;
+    // Top to bottom, as they sit on the first page they appear on.
+    const templates = [...seen.values()]
+      .sort((a, b) => b[0].across - a[0].across)
+      .map((lines): Running => {
+        const parts = lines.map((l) => l.text.trim().split(/(\d+)/));
+        const text = parts[0].map((part, j) => (j % 2 === 1 && parts.some((p) => p[j] !== part) ? "#" : part)).join("");
+        return { text, line: lines[0] };
+      });
+    if (edge === "top") result.header = templates;
+    else result.footer = templates;
   }
   return result;
 }
@@ -321,7 +342,10 @@ export function joinPages(pages: Block[][]): Block[] {
     const prev = out[out.length - 1];
     const lead = first?.kind === "p" ? first.runs.map((r) => r.text).join("") : "";
     if (prev && first && prev.kind === "p" && first.kind === "p" && prev.openEnd && /^\p{Ll}/u.test(lead)) {
-      out[out.length - 1] = { ...first, runs: [...prev.runs, { text: " ", bold: false, italic: false }, ...first.runs] };
+      out[out.length - 1] = {
+        ...first,
+        runs: [...prev.runs, { text: " ", bold: false, italic: false }, ...first.runs],
+      };
       out.push(...blocks.slice(1));
     } else {
       out.push(...blocks);
