@@ -2191,6 +2191,20 @@ button {
   padding: 24px 16px 96px;
 }
 
+/* Several pages side by side, so a signature can be seen moving on all of them. */
+.sg-pages.multi {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 16px 96px;
+}
+
+.sg-pages.multi .sg-fig {
+  gap: 4px;
+}
+
 .sg-fig {
   margin: 0;
   display: flex;
