@@ -48,15 +48,29 @@ app.innerHTML = `
       <button type="button" class="tool-link" id="go-compress">${icons.compress}<span>Compress</span></button>
       <button type="button" class="tool-link" id="go-numbers">${icons.hash}<span>Page numbers</span></button>
       <button type="button" class="tool-link" id="go-compare">${icons.compare}<span>Compare</span></button>
-      <button type="button" class="tool-link" id="go-word">${icons.word}<span>PDF to Word</span></button>
-      <button type="button" class="tool-link" id="go-topdf">${icons.toPdf}<span>Word to PDF</span></button>
-      <button type="button" class="tool-link" id="go-pdfimages">${icons.images}<span>PDF to images</span></button>
-      <button type="button" class="tool-link" id="go-images">${icons.image}<span>Images to PDF</span></button>
-      <button type="button" class="tool-link" id="go-text">${icons.fileText}<span>PDF to text</span></button>
+      <button type="button" class="tool-link" id="go-convert" title="PDF to Word, images or text, and Word or images to PDF">${icons.convert}<span>PDF to ?</span></button>
       <button type="button" class="tool-link" id="go-ocr">${icons.scan}<span>Make searchable</span></button>
     </nav>
   </div>
   <input type="file" id="file-input" accept="application/pdf,.pdf" hidden />
+</main>
+
+<main class="home convert-hub" id="convert-hub" hidden>
+  <button type="button" class="icon-btn hub-back" id="hub-back" title="Back" aria-label="Back">${icons.back}</button>
+  <div class="home-inner">
+    <h1 class="hub-title">Convert</h1>
+    <h2 class="hub-group" id="hub-from">From PDF</h2>
+    <nav class="tools" aria-labelledby="hub-from">
+      <button type="button" class="tool-link" id="go-word">${icons.word}<span>PDF to Word</span></button>
+      <button type="button" class="tool-link" id="go-pdfimages">${icons.images}<span>PDF to images</span></button>
+      <button type="button" class="tool-link" id="go-text">${icons.fileText}<span>PDF to text</span></button>
+    </nav>
+    <h2 class="hub-group" id="hub-to">To PDF</h2>
+    <nav class="tools" aria-labelledby="hub-to">
+      <button type="button" class="tool-link" id="go-topdf">${icons.toPdf}<span>Word to PDF</span></button>
+      <button type="button" class="tool-link" id="go-images">${icons.image}<span>Images to PDF</span></button>
+    </nav>
+  </div>
 </main>
 
 <div class="editor" id="editor" hidden>
@@ -144,6 +158,7 @@ app.innerHTML = `
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 const home = $("#home");
+const convertHub = $("#convert-hub");
 const editor = $("#editor");
 const fileInput = $<HTMLInputElement>("#file-input");
 const scroller = $("#scroller");
@@ -188,6 +203,7 @@ let activePreset: Preset | null = null;
 
 type Mode =
   | "home"
+  | "convert"
   | "editor"
   | "merge"
   | "split"
@@ -203,8 +219,10 @@ type Mode =
   | "word"
   | "topdf"
   | "pdfimages";
-type ToolMode = Exclude<Mode, "home" | "editor">;
+type ToolMode = Exclude<Mode, "home" | "editor" | "convert">;
 let mode: Mode = "home";
+/** Where the back arrow goes from the current tool: the start screen, or the Convert screen it was picked from. */
+let backTo: "home" | "convert" = "home";
 const HOME_TITLE = "HackerPDF: redact, merge, split and convert PDFs";
 const host = { goHome, openIn };
 const merge = new MergeTool(app, host);
@@ -307,9 +325,22 @@ function closeFile(force = false): void {
 function setMode(next: Mode): void {
   mode = next;
   home.hidden = next !== "home";
+  convertHub.hidden = next !== "convert";
   editor.hidden = next !== "editor";
   for (const [name, tool] of Object.entries(tools)) tool.root.hidden = next !== name;
   if (next === "home") document.title = HOME_TITLE;
+  if (next === "convert") document.title = "Convert - HackerPDF";
+}
+
+/** The back arrow: leave the tool for where it was opened from. */
+function goBack(): void {
+  if (mode === "editor") {
+    closeFile();
+    return;
+  }
+  const to = backTo;
+  goHome();
+  if (to === "convert") setMode("convert");
 }
 
 function goHome(): void {
@@ -328,6 +359,7 @@ function openIn(target: HandoffTarget, files: File[]): void {
 /** Switch to one of the tools. With no files, opens the file picker (call from a click). */
 function startTool(tool: ToolMode, files?: File[]): void {
   if (unsaved() && !window.confirm(`Discard your changes to ${current!.name}?`)) return;
+  backTo = mode === "convert" ? "convert" : "home";
   closeFile(true);
   const t = tools[tool];
   t.open();
@@ -581,6 +613,19 @@ $("#go-ocr").addEventListener("click", () => startTool("ocr"));
 $("#go-sign").addEventListener("click", () => startTool("sign"));
 $("#go-word").addEventListener("click", () => startTool("word"));
 $("#go-topdf").addEventListener("click", () => startTool("topdf"));
+$("#go-convert").addEventListener("click", () => setMode("convert"));
+$("#hub-back").addEventListener("click", () => setMode("home"));
+// A back arrow at the top left of every tool.
+for (const root of [editor, ...Object.values(tools).map((t) => t.root)]) {
+  const back = document.createElement("button");
+  back.type = "button";
+  back.className = "icon-btn tb-back";
+  back.title = "Back";
+  back.setAttribute("aria-label", "Back");
+  back.innerHTML = icons.back;
+  back.addEventListener("click", goBack);
+  root.querySelector(".toolbar .tb-file")?.prepend(back);
+}
 $("#go-pdfimages").addEventListener("click", () => startTool("pdfimages"));
 document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((b) =>
   b.addEventListener("click", () => setTool(b.dataset.tool as Tool)),
@@ -615,7 +660,11 @@ document.addEventListener("keydown", (e) => {
   const mod = e.metaKey || e.ctrlKey;
   const key = e.key.toLowerCase();
 
-  if (mode !== "home" && mode !== "editor" && mod && key === "s") {
+  if (mode === "convert" && e.key === "Escape") {
+    setMode("home");
+    return;
+  }
+  if (mode !== "home" && mode !== "editor" && mode !== "convert" && mod && key === "s") {
     e.preventDefault();
     void tools[mode].download();
     return;
@@ -706,6 +755,9 @@ window.addEventListener("dragenter", (e) => {
     sign: "Drop a PDF to sign it",
     word: "Drop PDFs to turn them into Word documents",
     topdf: "Drop Word files to turn them into PDFs",
+    convert: onlyImages
+      ? `Drop to turn ${many ? "these images" : "this image"} into a PDF`
+      : "Drop Word files or images to turn them into PDFs",
     pdfimages: "Drop PDFs to turn their pages into images",
     editor: "Drop your PDF to open it",
     home: docs
@@ -737,6 +789,13 @@ window.addEventListener("drop", (e) => {
   dropzone.hidden = true;
   const files = Array.from(e.dataTransfer?.files ?? []);
   if (!files.length) return;
+  if (mode === "convert") {
+    // From the Convert screen, a drop goes to the matching "to PDF" tool; for a PDF they pick what it becomes.
+    if (files.every((f) => isImage(f))) startTool("images", files);
+    else if (files.some((f) => documentKind(f))) startTool("topdf", files.filter((f) => documentKind(f)));
+    else toast("Pick what to turn it into first.", "Then choose your PDF, or drop it on that tool.");
+    return;
+  }
   if (isMulti(mode)) void tools[mode].add(files);
   else if (mode !== "home" && mode !== "editor") void tools[mode].load(files.find(isPdf) ?? files[0]);
   else if (files.filter(isPdf).length > 1) startTool("merge", files);
