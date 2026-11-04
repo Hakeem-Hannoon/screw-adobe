@@ -25,8 +25,9 @@ type Placed = Placement & { group?: number };
  * Sign a PDF: pick a colour, pick a style (a typed name in a handwriting
  * font, or draw it), then click where it goes. Signatures can be dragged
  * and resized; the same signature can go in several places. With "Multiple
- * pages?", one placement goes on every chosen page, and moving or resizing
- * any copy moves them all.
+ * pages?", the pages are laid out side by side so they all fit on screen,
+ * one placement goes on every chosen page, and moving or resizing any copy
+ * moves them all, live, on every page.
  */
 export class SignTool {
   readonly root: HTMLElement;
@@ -57,6 +58,8 @@ export class SignTool {
   private backBtn: HTMLButtonElement;
   private input: HTMLInputElement;
   private width: number;
+  /** Width the pages are drawn at right now. */
+  private tile: number;
   private active = false;
 
   constructor(
@@ -169,7 +172,16 @@ export class SignTool {
     this.input = q<HTMLInputElement>("input[type=file]");
     this.pageList = q<HTMLInputElement>("[data-page-list]");
     this.width = Math.min(760, window.innerWidth - 32);
+    this.tile = this.width;
     this.thumbs = new Thumbs(this.scroller, { w: this.width, h: this.width * 2 });
+    // Keep the side-by-side pages fitting the window.
+    let resizeTimer = 0;
+    window.addEventListener("resize", () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(() => {
+        if (this.active && this.multi && this.step === "place" && this.tileWidth() !== this.tile) this.renderPages();
+      }, 150);
+    });
 
     q("[data-home]").addEventListener("click", () => this.host.goHome());
     q("[data-pick]").addEventListener("click", () => this.pick());
@@ -222,9 +234,11 @@ export class SignTool {
     q<HTMLInputElement>("[data-multi]").addEventListener("change", (e) => {
       this.multi = (e.target as HTMLInputElement).checked;
       if (this.multi && !this.chosen.size && this.src) this.chosen = new Set(this.src.sizes.map((_, i) => i));
-      this.pagesEl.classList.toggle("multi", this.multi);
       this.syncChosen();
+      // Side by side for several pages, one big page at a time otherwise.
+      this.renderPages();
       if (this.multi) this.applyChosen();
+      this.scroller.scrollTop = 0;
       this.sync();
     });
     this.pageList.addEventListener("input", () => {
@@ -429,6 +443,11 @@ export class SignTool {
     const src = this.src;
     if (!src) return;
     this.thumbs.clear();
+    const w = this.multi ? this.tileWidth() : this.width;
+    if (w !== this.tile) {
+      this.tile = w;
+      this.thumbs = new Thumbs(this.scroller, { w, h: w * 2 });
+    }
     const frag = document.createDocumentFragment();
     src.sizes.forEach((size, i) => {
       const fig = document.createElement("figure");
@@ -626,6 +645,31 @@ export class SignTool {
     this.places = this.places.filter((p) => !gone.has(p.id));
     if (this.selected !== null && gone.has(this.selected)) this.selected = null;
     this.drawPlacements();
+  }
+
+  /**
+   * How wide to draw each page so that, side by side, they all fit in the
+   * window: the widest that does, trying every number of columns. Very
+   * long documents scroll rather than shrink past legibility.
+   */
+  private tileWidth(): number {
+    const src = this.src;
+    if (!src) return this.width;
+    const n = src.sizes.length;
+    const aspect = Math.max(...src.sizes.map((s) => s.h / s.w));
+    const W = Math.max(200, this.scroller.clientWidth - 32);
+    const H = Math.max(200, this.scroller.clientHeight - 48);
+    const gap = 16;
+    const caption = 26;
+    let best = 0;
+    for (let cols = 1; cols <= n; cols++) {
+      const rows = Math.ceil(n / cols);
+      const byWidth = (W - gap * (cols - 1)) / cols;
+      const byHeight = (H - rows * (caption + gap)) / rows / aspect;
+      best = Math.max(best, Math.min(byWidth, byHeight));
+    }
+    const smallest = Math.min(170, (W - gap) / 2);
+    return Math.round(Math.max(smallest, Math.min(this.width, best)));
   }
 
   /** A placement and the copies linked to it. */

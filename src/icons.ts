@@ -29,6 +29,7 @@ export const icons = {
   images: svg(
     '<rect x="7.5" y="3.5" width="13" height="13" rx="1.5"/><path d="M4.5 7.5v11a2 2 0 0 0 2 2h11"/><circle cx="12" cy="8.25" r="1.25"/><path d="m8 15.5 3.5-3.5 2.5 2 2-1.5 4 3.5"/>',
   ),
+  convert: svg('<path d="M4 8h14M14.5 4.5 18 8l-3.5 3.5M20 16H6M9.5 12.5 6 16l3.5 3.5"/>'),
   hash: svg('<path d="M9 4 7 20M17 4l-2 16M4.5 9h15M3.5 15h15"/>'),
   rotate: svg('<path d="M20 12a8 8 0 1 1-2.34-5.66"/><path d="M20 4v5h-5"/>'),
   rotateLeft: svg('<path d="M4 12a8 8 0 1 0 2.34-5.66"/><path d="M4 4v5h5"/>'),

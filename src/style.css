@@ -322,6 +322,45 @@ button {
   }
 }
 
+/* Convert screen: every conversion, from PDF and to PDF */
+
+.convert-hub {
+  position: relative;
+}
+
+.hub-back {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  width: 40px;
+  height: 40px;
+}
+
+.hub-title {
+  margin: 0 0 28px;
+  font-size: clamp(36px, 8vw, 64px);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.04em;
+}
+
+.hub-group {
+  margin: 0 0 10px;
+  color: var(--graphite);
+  font-size: var(--fs-sm);
+  font-weight: 600;
+}
+
+.hub-group ~ .hub-group {
+  margin-top: 26px;
+}
+
+/* The back arrow at the top left of every tool */
+.tb-back {
+  flex: none;
+  margin-right: -4px;
+}
+
 /* -------------------------------------------------------------- editor */
 
 .editor,
@@ -2150,6 +2189,20 @@ button {
   align-items: center;
   gap: 22px;
   padding: 24px 16px 96px;
+}
+
+/* Several pages side by side, so a signature can be seen moving on all of them. */
+.sg-pages.multi {
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 16px 96px;
+}
+
+.sg-pages.multi .sg-fig {
+  gap: 4px;
 }
 
 .sg-fig {
