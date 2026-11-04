@@ -2309,3 +2309,48 @@ button {
     animation: none;
   }
 }
+
+/* "Continue with" */
+
+.handoff {
+  position: relative;
+}
+
+.handoff-menu {
+  width: 240px;
+  padding: 6px;
+  z-index: 30;
+}
+
+.menu-head {
+  margin: 4px 8px 6px;
+  color: var(--graphite);
+  font-size: var(--fs-xs);
+  font-weight: 600;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--fs-md);
+  text-align: left;
+  cursor: pointer;
+}
+
+.menu-item:hover,
+.menu-item:focus-visible {
+  background: var(--hover);
+}
+
+.menu-item svg {
+  color: var(--graphite);
+  flex: none;
+}

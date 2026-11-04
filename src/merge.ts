@@ -1,4 +1,5 @@
 import { buildPdfs } from "./combine";
+import type { HandoffTarget } from "./handoff";
 import { icons } from "./icons";
 import { makeSortable } from "./reorder";
 import { closeSource, loadSource, type PdfSource } from "./source";
@@ -7,6 +8,8 @@ import { baseName, isPdf, saveFile, showBusy, toast } from "./ui";
 
 export interface ToolHost {
   goHome(): void;
+  /** Open finished PDFs in another tool, without a download and upload in between. */
+  openIn(target: HandoffTarget, files: File[]): void;
 }
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
