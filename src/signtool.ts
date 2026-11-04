@@ -18,11 +18,15 @@ import { baseName, isPdf, saveFile, showBusy, toast } from "./ui";
 
 type Step = "setup" | "place";
 type Style = number | "draw";
+/** A placed signature. Copies placed on several pages at once share a group and move together. */
+type Placed = Placement & { group?: number };
 
 /**
  * Sign a PDF: pick a colour, pick a style (a typed name in a handwriting
  * font, or draw it), then click where it goes. Signatures can be dragged
- * and resized; the same signature can go in several places.
+ * and resized; the same signature can go in several places. With "Multiple
+ * pages?", one placement goes on every chosen page, and moving or resizing
+ * any copy moves them all.
  */
 export class SignTool {
   readonly root: HTMLElement;
@@ -34,7 +38,13 @@ export class SignTool {
   private strokes: Stroke[] = [];
   private sig: Signature | null = null;
   private previews: (Signature | null)[] = [];
-  private places: Placement[] = [];
+  private places: Placed[] = [];
+  private multi = false;
+  /** Pages (0-based) a new signature goes on in multiple-page mode. */
+  private chosen = new Set<number>();
+  private nextGroup = 1;
+  private lastGroup: number | null = null;
+  private pageList: HTMLInputElement;
   private selected: number | null = null;
   private nextId = 1;
   private previewRun = 0;
@@ -71,6 +81,15 @@ export class SignTool {
         </div>
       </header>
       <div class="findbar optbar" data-opts hidden>
+        <label class="check inline" title="Put the same signature on several pages at once">
+          <input type="checkbox" data-multi />
+          <span><strong>Multiple pages?</strong></span>
+        </label>
+        <label class="every" data-pages-opt hidden>
+          Pages
+          <input type="text" class="sg-page-list" data-page-list inputmode="text" spellcheck="false" autocomplete="off" placeholder="1-3, 7" aria-describedby="sg-pages-help" />
+        </label>
+        <span class="sr-only" id="sg-pages-help">Page numbers and ranges, like 1-3, 7. Or "all".</span>
         <p class="opt-hint" data-hint></p>
         <span class="find-count" data-status aria-live="polite"></span>
       </div>
@@ -148,6 +167,7 @@ export class SignTool {
     this.goBtn = q<HTMLButtonElement>("[data-go]");
     this.backBtn = q<HTMLButtonElement>("[data-back]");
     this.input = q<HTMLInputElement>("input[type=file]");
+    this.pageList = q<HTMLInputElement>("[data-page-list]");
     this.width = Math.min(760, window.innerWidth - 32);
     this.thumbs = new Thumbs(this.scroller, { w: this.width, h: this.width * 2 });
 
@@ -199,6 +219,32 @@ export class SignTool {
     });
     this.setupPad();
     this.setupPlacing();
+    q<HTMLInputElement>("[data-multi]").addEventListener("change", (e) => {
+      this.multi = (e.target as HTMLInputElement).checked;
+      if (this.multi && !this.chosen.size && this.src) this.chosen = new Set(this.src.sizes.map((_, i) => i));
+      this.pagesEl.classList.toggle("multi", this.multi);
+      this.syncChosen();
+      if (this.multi) this.applyChosen();
+      this.sync();
+    });
+    this.pageList.addEventListener("input", () => {
+      const pages = this.src ? parsePages(this.pageList.value, this.src.sizes.length) : null;
+      this.pageList.setAttribute("aria-invalid", String(pages === null));
+      if (!pages) return;
+      this.chosen = pages;
+      this.syncChosen(false);
+      this.applyChosen();
+    });
+    this.pageList.addEventListener("blur", () => this.syncChosen());
+    this.pagesEl.addEventListener("change", (e) => {
+      const box = (e.target as HTMLElement).closest<HTMLInputElement>(".sg-check");
+      if (!box) return;
+      const i = Number(box.dataset.page);
+      if (box.checked) this.chosen.add(i);
+      else this.chosen.delete(i);
+      this.syncChosen();
+      this.applyChosen();
+    });
     this.input.addEventListener("change", () => {
       const f = this.input.files?.[0];
       this.input.value = "";
@@ -398,11 +444,21 @@ export class SignTool {
       layer.className = "sg-layer";
       wrap.append(sheet, layer);
       const cap = document.createElement("figcaption");
-      cap.textContent = `Page ${i + 1} of ${src.sizes.length}`;
+      const label = document.createElement("label");
+      label.className = "sg-cap";
+      const box = document.createElement("input");
+      box.type = "checkbox";
+      box.className = "sg-check";
+      box.dataset.page = String(i);
+      box.checked = this.chosen.has(i);
+      box.setAttribute("aria-label", `Sign page ${i + 1}`);
+      label.append(box, `Page ${i + 1} of ${src.sizes.length}`);
+      cap.append(label);
       fig.append(wrap, cap);
       frag.append(fig);
     });
     this.pagesEl.replaceChildren(frag);
+    this.pagesEl.classList.toggle("multi", this.multi);
     this.drawPlacements();
   }
 
@@ -414,11 +470,20 @@ export class SignTool {
       if (!layer) continue;
       const el = document.createElement("div");
       el.className = "sg-place";
-      el.classList.toggle("selected", p.id === this.selected);
+      el.classList.toggle(
+        "selected",
+        this.linked(this.selected).some((x) => x.id === p.id),
+      );
       el.dataset.id = String(p.id);
       el.tabIndex = 0;
       el.setAttribute("role", "img");
-      el.setAttribute("aria-label", "Signature. Drag to move; Delete to remove.");
+      const copies = this.linked(p.id).length;
+      el.setAttribute(
+        "aria-label",
+        copies > 1
+          ? `Signature on ${copies} pages. Drag to move them all; Delete to remove them all.`
+          : "Signature. Drag to move; Delete to remove.",
+      );
       el.style.left = `${p.fx * 100}%`;
       el.style.top = `${p.fy * 100}%`;
       el.style.width = `${p.fw * 100}%`;
@@ -433,7 +498,11 @@ export class SignTool {
       del.type = "button";
       del.className = "sg-del";
       del.title = "Remove";
-      del.setAttribute("aria-label", "Remove this signature");
+      del.setAttribute(
+        "aria-label",
+        copies > 1 ? `Remove this signature from all ${copies} pages` : "Remove this signature",
+      );
+      if (copies > 1) del.title = `Remove from all ${copies} pages`;
       del.innerHTML = icons.close;
       el.append(img, handle, del);
       layer.append(el);
@@ -458,15 +527,24 @@ export class SignTool {
         // A click on the page: put a signature there, about 2.2 inches wide.
         const ptw = Number(page.dataset.ptw);
         const fw = Math.min(0.6, 160 / ptw);
-        const p: Placement = {
+        const at = Number(page.dataset.page);
+        const p: Placed = {
           id: this.nextId++,
-          page: Number(page.dataset.page),
+          page: at,
           fx: (e.clientX - rect.left) / rect.width,
           fy: (e.clientY - rect.top) / rect.height,
           fw,
         };
         this.clampInto(p, rect);
         this.places.push(p);
+        if (this.multi) {
+          // The same spot on every chosen page (and this one).
+          this.chosen.add(at);
+          p.group = this.nextGroup++;
+          this.lastGroup = p.group;
+          this.syncChosen();
+          this.spread(p);
+        }
         this.drawPlacements();
         this.select(p.id);
         return;
@@ -476,6 +554,7 @@ export class SignTool {
       const p = this.places.find((x) => x.id === id)!;
       this.select(id);
       const el = this.pagesEl.querySelector<HTMLElement>(`.sg-place[data-id="${id}"]`)!;
+      const others = this.linked(id).filter((x) => x !== p);
       const resizing = !!t.closest(".sg-handle");
       const start = { x: e.clientX, y: e.clientY, fx: p.fx, fy: p.fy, fw: p.fw };
       el.setPointerCapture(e.pointerId);
@@ -492,6 +571,18 @@ export class SignTool {
         el.style.left = `${p.fx * 100}%`;
         el.style.top = `${p.fy * 100}%`;
         el.style.width = `${p.fw * 100}%`;
+        // Copies on other pages follow.
+        for (const o of others) {
+          Object.assign(o, { fx: p.fx, fy: p.fy, fw: p.fw });
+          const r = this.pageRect(o.page);
+          if (r) this.clampInto(o, r);
+          const oel = this.pagesEl.querySelector<HTMLElement>(`.sg-place[data-id="${o.id}"]`);
+          if (oel) {
+            oel.style.left = `${o.fx * 100}%`;
+            oel.style.top = `${o.fy * 100}%`;
+            oel.style.width = `${o.fw * 100}%`;
+          }
+        }
       };
       const up = () => {
         el.removeEventListener("pointermove", move);
@@ -519,17 +610,84 @@ export class SignTool {
 
   private select(id: number | null): void {
     this.selected = id;
+    const group = new Set(this.linked(id).map((p) => p.id));
     for (const el of this.pagesEl.querySelectorAll<HTMLElement>(".sg-place")) {
-      el.classList.toggle("selected", Number(el.dataset.id) === id);
+      el.classList.toggle("selected", group.has(Number(el.dataset.id)));
     }
+    const g = id === null ? undefined : this.places.find((p) => p.id === id)?.group;
+    if (g !== undefined) this.lastGroup = g;
     if (id !== null)
       this.pagesEl.querySelector<HTMLElement>(`.sg-place[data-id="${id}"]`)?.focus({ preventScroll: true });
   }
 
+  /** Remove a signature, and its copies on other pages. */
   private remove(id: number): void {
-    this.places = this.places.filter((p) => p.id !== id);
-    if (this.selected === id) this.selected = null;
+    const gone = new Set(this.linked(id).map((p) => p.id));
+    this.places = this.places.filter((p) => !gone.has(p.id));
+    if (this.selected !== null && gone.has(this.selected)) this.selected = null;
     this.drawPlacements();
+  }
+
+  /** A placement and the copies linked to it. */
+  private linked(id: number | null): Placed[] {
+    if (id === null) return [];
+    const p = this.places.find((x) => x.id === id);
+    if (!p) return [];
+    return p.group === undefined ? [p] : this.places.filter((x) => x.group === p.group);
+  }
+
+  private pageRect(page: number): DOMRect | null {
+    return this.pagesEl.querySelector<HTMLElement>(`.sg-page[data-page="${page}"]`)?.getBoundingClientRect() ?? null;
+  }
+
+  /** Copy a grouped placement onto every chosen page that doesn't have it yet. */
+  private spread(p: Placed): void {
+    const have = new Set(this.places.filter((x) => x.group === p.group).map((x) => x.page));
+    for (const page of [...this.chosen].sort((a, b) => a - b)) {
+      if (have.has(page)) continue;
+      const copy: Placed = { ...p, id: this.nextId++, page };
+      const r = this.pageRect(page);
+      if (r) this.clampInto(copy, r);
+      this.places.push(copy);
+    }
+  }
+
+  /**
+   * After the chosen pages change: the selected signature (or the last one
+   * placed on several pages) gets copies on newly chosen pages and loses
+   * them on pages no longer chosen.
+   */
+  private applyChosen(): void {
+    if (!this.multi) return;
+    let master = this.selected !== null ? this.places.find((p) => p.id === this.selected) : undefined;
+    if (!master && this.lastGroup !== null) master = this.places.find((p) => p.group === this.lastGroup);
+    if (!master) return;
+    if (master.group === undefined) {
+      master.group = this.nextGroup++;
+      this.lastGroup = master.group;
+    }
+    const g = master.group;
+    this.places = this.places.filter((p) => p.group !== g || this.chosen.has(p.page));
+    const left = this.places.filter((p) => p.group === g);
+    if (left.length) this.spread(left.includes(master) ? master : left[0]);
+    else if (this.chosen.size) {
+      this.places.push(master);
+      this.spread(master);
+      this.places = this.places.filter((p) => p.group !== g || this.chosen.has(p.page));
+    }
+    if (this.selected !== null && !this.places.some((p) => p.id === this.selected)) this.selected = null;
+    this.drawPlacements();
+  }
+
+  /** Show the chosen pages in the page boxes and (unless they're typing there) the page list. */
+  private syncChosen(list = true): void {
+    for (const box of this.pagesEl.querySelectorAll<HTMLInputElement>(".sg-check")) {
+      box.checked = this.chosen.has(Number(box.dataset.page));
+    }
+    if (list && this.src) {
+      this.pageList.value = formatPages(this.chosen, this.src.sizes.length);
+      this.pageList.setAttribute("aria-invalid", "false");
+    }
   }
 
   // ---------------------------------------------------------------- shared
@@ -551,6 +709,8 @@ export class SignTool {
     this.src = null;
     this.places = [];
     this.selected = null;
+    this.chosen.clear();
+    this.lastGroup = null;
     if (!keepSignature) this.sig = null;
     this.thumbs.clear();
     this.pagesEl.replaceChildren();
@@ -566,6 +726,8 @@ export class SignTool {
     q("[data-setup]").hidden = !src || placing;
     this.pagesEl.hidden = !placing;
     q("[data-opts]").hidden = !placing;
+    q("[data-pages-opt]").hidden = !this.multi;
+    this.root.querySelector<HTMLInputElement>("[data-multi]")!.checked = this.multi;
     this.backBtn.hidden = !placing;
     const nameEl = q("[data-file]");
     nameEl.textContent = src ? src.name : "Sign";
@@ -582,11 +744,19 @@ export class SignTool {
     q("[data-undo]").hidden = q("[data-clear]").hidden = !this.strokes.length;
 
     const n = this.places.length;
+    const pagesSigned = new Set(this.places.map((p) => p.page)).size;
     const touch = window.matchMedia("(pointer: coarse)").matches;
-    q("[data-hint]").textContent = n
-      ? `${touch ? "Tap" : "Click"} elsewhere to sign again. Drag to move, pull the corner to resize.`
-      : `${touch ? "Tap" : "Click"} where your signature should go.`;
-    q("[data-status]").textContent = n ? (n === 1 ? "1 signature" : `${n} signatures`) : "";
+    const tap = touch ? "Tap" : "Click";
+    q("[data-hint]").textContent = this.multi
+      ? n
+        ? "Drag any copy to move them all. Tick or untick pages to add or remove it."
+        : `Tick the pages to sign, then ${tap.toLowerCase()} where it goes on any of them.`
+      : n
+        ? `${tap} elsewhere to sign again. Drag to move, pull the corner to resize.`
+        : `${tap} where your signature should go.`;
+    q("[data-status]").textContent = n
+      ? `${n === 1 ? "1 signature" : `${n} signatures`}${pagesSigned > 1 ? ` on ${pagesSigned} pages` : ""}`
+      : "";
 
     if (placing) {
       this.goBtn.innerHTML = `${icons.download}<span>Download<span class="lbl"> PDF</span></span>`;
@@ -602,4 +772,35 @@ export class SignTool {
           : "Type your name first";
     }
   }
+}
+
+/** "1-3, 7, 10-" as a set of 0-based pages; "all" for every page. Null if it doesn't make sense. */
+export function parsePages(text: string, count: number): Set<number> | null {
+  const t = text.trim().toLowerCase();
+  if (t === "all" || t === "*") return new Set(Array.from({ length: count }, (_, i) => i));
+  const out = new Set<number>();
+  if (!t) return out;
+  for (const part of t.split(/[,;\s]+/).filter(Boolean)) {
+    const m = /^(\d+)?\s*(?:(-|\u2013|to)\s*(\d+)?)?$/.exec(part);
+    if (!m || (!m[1] && !m[3])) return null;
+    const a = m[1] ? Number(m[1]) : 1;
+    const b = m[2] ? (m[3] ? Number(m[3]) : count) : a;
+    if (a < 1 || b < a || b > count) return null;
+    for (let i = a; i <= b; i++) out.add(i - 1);
+  }
+  return out;
+}
+
+/** The other way: {0, 1, 2, 6} as "1-3, 7", or "all". */
+export function formatPages(pages: Set<number>, count: number): string {
+  if (count > 1 && pages.size === count) return "all";
+  const list = [...pages].sort((a, b) => a - b);
+  const parts: string[] = [];
+  for (let i = 0; i < list.length;) {
+    let j = i;
+    while (j + 1 < list.length && list[j + 1] === list[j] + 1) j++;
+    parts.push(j > i ? `${list[i] + 1}-${list[j] + 1}` : String(list[i] + 1));
+    i = j + 1;
+  }
+  return parts.join(", ");
 }

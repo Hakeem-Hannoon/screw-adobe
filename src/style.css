@@ -2170,6 +2170,53 @@ button {
   cursor: crosshair;
 }
 
+/* multiple pages */
+
+.sg-cap {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.sg-check {
+  display: none;
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--marquee);
+}
+
+.sg-pages.multi .sg-check {
+  display: inline-block;
+}
+
+.sg-pages.multi .sg-cap {
+  cursor: pointer;
+  color: var(--text);
+  font-weight: 560;
+}
+
+.sg-pages.multi .sg-fig:has(.sg-check:not(:checked)) .sg-page {
+  opacity: 0.55;
+}
+
+.every .sg-page-list {
+  width: 120px;
+}
+
+.sg-page-list[aria-invalid="true"] {
+  border-color: #c4291c;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
 .sg-layer {
   position: absolute;
   inset: 0;
