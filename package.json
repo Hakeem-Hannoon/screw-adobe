@@ -2,7 +2,7 @@
   "name": "hackerpdf",
   "private": true,
   "version": "1.0.0",
-  "description": "Private, in-browser PDF tools: redact, merge, split, rotate, number pages, convert to text or Markdown, and turn images into PDFs.",
+  "description": "Private, in-browser PDF tools: redact, sign, merge, split, rotate, number pages, convert between PDF and Word, to text or Markdown, and between PDFs and images.",
   "type": "module",
   "scripts": {
     "predev": "node scripts/copy-pdfjs-assets.mjs && node scripts/copy-ocr-assets.mjs",
