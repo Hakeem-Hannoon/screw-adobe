@@ -35,6 +35,8 @@ export function handoffButton(opts: {
   count: () => number;
   pick: (target: HandoffTarget) => void;
   compact?: boolean;
+  /** Tools not to offer, like the one it's in. */
+  exclude?: HandoffTarget[];
 }): HTMLElement {
   const wrap = document.createElement("div");
   wrap.className = "handoff";
@@ -63,7 +65,7 @@ export function handoffButton(opts: {
     const many = opts.count() > 1;
     menu.replaceChildren(
       Object.assign(document.createElement("p"), { className: "menu-head", textContent: "Keep working on it" }),
-      ...TARGETS.filter((t) => !many || !SINGLE.has(t.target)).map((t) => {
+      ...TARGETS.filter((t) => (!many || !SINGLE.has(t.target)) && !opts.exclude?.includes(t.target)).map((t) => {
         const item = document.createElement("button");
         item.type = "button";
         item.className = "menu-item";
