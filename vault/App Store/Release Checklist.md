@@ -33,7 +33,15 @@ Everything in the repository is ready. These are the steps only you can do, beca
   - SKU: `hackerpdf-ios`
   - User access: Full access
 
-## 4. Build and upload (on a Mac with Xcode 26 or later)
+## 4a. Build and upload without a Mac (GitHub Actions)
+
+The **iOS release** workflow (`.github/workflows/ios-release.yml`) archives, signs and uploads the app on a macOS runner, and uploads the screenshots and the review sample PDF through the App Store Connect API.
+
+- One-time: an App Store Connect **Team API key** with **Admin** access ("GitHub Actions HackerPDF"), with its `.p8` contents saved as the repository secret `APPSTORE_API_PRIVATE_KEY`. The key ID and issuer ID are in the workflow file (they're identifiers, not secrets).
+- Run it: GitHub › Actions › **iOS release** › *Run workflow*. Leave the build number empty to use the run number; it must go up with every upload.
+- Signing is "cloud signing": Xcode uses the key to fetch or create the distribution certificate and profile, so no certificate is stored anywhere in the repo.
+
+## 4b. Or build and upload from a Mac (Xcode 26 or later)
 
 ```bash
 git pull
