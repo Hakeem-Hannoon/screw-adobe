@@ -62,6 +62,8 @@ For a free personal project, "not a trader" is the usual answer, but it's a lega
 | --- | --- |
 | iPhone 6.9" screenshots | The 8 files in `Attachments/App Store/iPhone 6.9in (1320x2868)/`, in order |
 | iPad 13" screenshots | The 8 files in `Attachments/App Store/iPad 13in (2064x2752)/`, in order |
+| Header (Header and Search Results › Header) | `Attachments/App Store/Header (3840x1646).png`, the HackerPDF wordmark. Source: the `.svg` next to it; regenerate both with `scripts/app-store/header.mjs` |
+| Search Results asset | None (App Store falls back to the screenshots) |
 | App Preview video | None (optional) |
 | Promotional Text | See [[App Store/Listing Copy#Promotional text (170 max)]] |
 | Description | See [[App Store/Listing Copy#Description (4000 max)]] |
