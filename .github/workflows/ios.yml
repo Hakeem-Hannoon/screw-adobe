@@ -69,6 +69,12 @@ jobs:
           shoot "iPhone .* Pro Max"
           shoot "iPad Pro 13"
           ls -la shots
+          # A launch that only shows the splash is a tiny, flat PNG; the real
+          # start screen is far bigger. Fail loudly if the web app didn't load.
+          for f in shots/*.png; do
+            sz=$(stat -f%z "$f"); echo "$f: $sz bytes"
+            if [ "$sz" -lt 60000 ]; then echo "::error::$f looks like a blank or splash-only screen"; exit 1; fi
+          done
 
       - uses: actions/upload-artifact@v4
         with:
