@@ -1,0 +1,125 @@
+name: iOS release (upload to App Store Connect)
+
+# Builds, signs and uploads HackerPDF to App Store Connect, where it shows up
+# under TestFlight and can be attached to an App Store version.
+#
+# Signing is fully automatic: Xcode uses the App Store Connect API key to fetch
+# or create the distribution certificate and profile ("cloud signing"), so no
+# certificates live in this repository.
+#
+# Needs one repository secret:
+#   APPSTORE_API_PRIVATE_KEY  the contents of AuthKey_<KEY_ID>.p8 (Admin key)
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_number:
+        description: "Build number (must be higher than the last upload). Leave empty to use the run number."
+        required: false
+      upload_build:
+        description: "Build, sign and upload the app"
+        type: boolean
+        default: true
+      upload_media:
+        description: "Upload the screenshots and the App Review sample PDF"
+        type: boolean
+        default: true
+
+env:
+  TEAM_ID: 7KA9LPR2Z5
+  ASC_ISSUER_ID: 0308b376-4b44-4e4f-8178-f0e7a5ba394f
+  ASC_KEY_ID: SET_ME
+  ASC_APP_ID: "6830978707"
+
+jobs:
+  upload:
+    if: ${{ inputs.upload_build }}
+    runs-on: macos-26
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: xcodebuild -version
+
+      - run: npm ci
+
+      - name: Build the web app and copy it into the iOS project
+        run: npm run ios:sync
+
+      - name: Install the App Store Connect API key
+        env:
+          KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+        run: |
+          if [ -z "$KEY" ]; then echo "::error::Add the APPSTORE_API_PRIVATE_KEY repository secret first."; exit 1; fi
+          if [ "$ASC_KEY_ID" = "SET_ME" ]; then echo "::error::Put the API key's Key ID in ASC_KEY_ID at the top of this workflow."; exit 1; fi
+          mkdir -p "$RUNNER_TEMP/keys"
+          printf '%s\n' "$KEY" > "$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8"
+          echo "KEY_PATH=$RUNNER_TEMP/keys/AuthKey_${ASC_KEY_ID}.p8" >> "$GITHUB_ENV"
+
+      - name: Archive
+        run: |
+          BUILD="${{ github.event.inputs.build_number }}"
+          [ -z "$BUILD" ] && BUILD="${{ github.run_number }}"
+          echo "Build number: $BUILD"
+          xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath "$RUNNER_TEMP/HackerPDF.xcarchive" \
+            DEVELOPMENT_TEAM="$TEAM_ID" CODE_SIGN_STYLE=Automatic \
+            CURRENT_PROJECT_VERSION="$BUILD" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            archive | tail -n 60
+
+      - name: Sign for the App Store and upload
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>teamID</key><string>${TEAM_ID}</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive \
+            -archivePath "$RUNNER_TEMP/HackerPDF.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" \
+            -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates \
+            -authenticationKeyPath "$KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" \
+            -authenticationKeyIssuerID "$ASC_ISSUER_ID" | tail -n 60
+
+      - name: Remove the key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/keys"
+
+  media:
+    if: ${{ inputs.upload_media }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "pyjwt[crypto]" requests
+      - name: Upload screenshots and the review sample
+        env:
+          KEY: ${{ secrets.APPSTORE_API_PRIVATE_KEY }}
+        run: |
+          printf '%s\n' "$KEY" > "$RUNNER_TEMP/key.p8"
+          ASC_KEY_PATH="$RUNNER_TEMP/key.p8" python scripts/app-store/asc_media.py
+          rm -f "$RUNNER_TEMP/key.p8"
