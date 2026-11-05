@@ -82,6 +82,17 @@ npm run preview  # serve dist/ (with the production CSP)
 
 Built with [pdf.js](https://mozilla.github.io/pdf.js/) for rendering and text search, [pdf-lib](https://pdf-lib.js.org/) (with its fontkit) for writing the output, [Tesseract.js](https://tesseract.projectnaptha.com/) for OCR, [docx-preview](https://github.com/VolodymyrBaydalka/docxjs) and [JSZip](https://stuk.github.io/jszip/) for reading Word files, [marked](https://marked.js.org/) for Markdown, Vite, and TypeScript. No framework.
 
+## iPhone and iPad app
+
+The same build ships as a universal iOS app (Capacitor 8): bundled, offline, no network access, saving into the Files app. Free, no ads, no account, no data collected.
+
+```bash
+npm run ios        # build, copy into ios/, open Xcode (needs a Mac with Xcode 26+)
+npm run ios:sync   # build and copy only
+```
+
+Everything for the App Store (step-by-step release checklist, every App Store Connect answer, privacy label, age rating, listing copy and the exact-size iPhone 6.9" and iPad 13" screenshots) is in the Obsidian vault in [`vault/`](vault/Home.md). Privacy policy: [`public/privacy.html`](public/privacy.html), support: [`public/support.html`](public/support.html). `.github/workflows/ios.yml` compiles the app on macOS and launches it in iPhone and iPad simulators.
+
 ## Deploy
 
 Every push to `main` builds the site and publishes `dist/` to the `gh-pages` branch via GitHub Actions (`.github/workflows/deploy.yml`). GitHub Pages serves that branch.

@@ -1,6 +1,8 @@
 // Small UI helpers shared by the editor and the merge/split tools. They look
 // their elements up at call time, so main.ts only has to render the markup.
 
+import { isNative, saveNative } from "./native";
+
 const $ = <T extends HTMLElement = HTMLElement>(sel: string) => document.querySelector<T>(sel)!;
 
 export function showBusy(text: string | null): void {
@@ -15,7 +17,8 @@ export function toast(message: string, detail?: string, action?: { label: string
   el.className = "toast";
   const body = document.createElement("div");
   const title = document.createElement("p");
-  title.textContent = message;
+  // In the iOS app nothing is "downloaded": the file lands in Files.
+  title.textContent = isNative ? message.replace(/^Downloaded /, "Saved ") : message;
   body.append(title);
   if (detail) {
     const small = document.createElement("p");
@@ -38,8 +41,14 @@ export function toast(message: string, detail?: string, action?: { label: string
   window.setTimeout(() => el.remove(), action ? 7000 : 5000);
 }
 
-/** Hand a file to the browser's download flow. */
+/** Hand a file to the browser's download flow (or, in the iOS app, Files and the share sheet). */
 export function saveFile(blob: Blob, name: string): void {
+  if (isNative) {
+    saveNative(blob, name).catch(() =>
+      toast(`${name} couldn't be saved.`, "Your device may be out of space. Free some up and try again."),
+    );
+    return;
+  }
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
