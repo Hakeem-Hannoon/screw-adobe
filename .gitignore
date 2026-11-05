@@ -5,3 +5,7 @@ dist/
 .vite/
 public/pdfjs/
 public/tesseract/
+vault/.obsidian/workspace*.json
+vault/.obsidian/cache/
+vault/.trash/
+ios/App/build/
