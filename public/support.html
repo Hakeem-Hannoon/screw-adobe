@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; img-src 'self'; base-uri 'none'; form-action 'none'" />
+    <title>HackerPDF support</title>
+    <meta name="description" content="Help with HackerPDF, the free PDF toolkit that never uploads your files." />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" href="./favicon.svg" type="image/svg+xml" />
+    <style>
+      :root { color-scheme: light dark; --text: #000; --muted: #565c64; --bg: #f8f9fa; --rule: #cbd0d6; }
+      @media (prefers-color-scheme: dark) { :root { --text: #f2f3f5; --muted: #9ba1a9; --bg: #16181b; --rule: #3a3f46; } }
+      body { margin: 0; background: var(--bg); color: var(--text); font: 17px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+      main { max-width: 680px; margin: 0 auto; padding: calc(40px + env(safe-area-inset-top)) 22px 64px; }
+      h1 { font-size: 34px; letter-spacing: -0.03em; line-height: 1.1; margin: 0 0 18px; }
+      h2 { font-size: 19px; letter-spacing: -0.01em; margin: 30px 0 4px; }
+      .contact { font-size: 19px; padding: 16px 18px; border: 1px solid var(--rule); border-radius: 10px; }
+      a { color: inherit; }
+      footer { margin-top: 48px; padding-top: 18px; border-top: 1px solid var(--rule); color: var(--muted); font-size: 15px; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>HackerPDF support</h1>
+      <p class="contact">Email <a href="mailto:hakeemhannoon@gmail.com?subject=HackerPDF%20support">hakeemhannoon@gmail.com</a> with your device, iOS version and what happened. Please don't attach a private document; describe it instead.</p>
+
+      <h2>Where do my saved files go?</h2>
+      <p>On iPhone and iPad, open the Files app and go to <em>On My iPhone</em> (or <em>On My iPad</em>) › <em>HackerPDF</em>. When you save, the share sheet also opens so you can choose <em>Save to Files</em>, Mail, AirDrop and so on. On the website, files go to your browser's downloads.</p>
+
+      <h2>Is redaction really permanent?</h2>
+      <p>Yes. Every page you edit is rebuilt as an image with your boxes burned in, so the text underneath is gone from the file, not just hidden. Pages you didn't touch keep their selectable text. For the strongest option, open the arrow next to Download and turn on <em>Flatten every page</em>.</p>
+
+      <h2>Do I need an account or internet?</h2>
+      <p>No account, ever. The app works fully offline. It is free, with no ads and no in-app purchases.</p>
+
+      <h2>A password-protected PDF won't open</h2>
+      <p>Enter its password when asked. It stays on your device. The saved copy has no password.</p>
+
+      <h2>A scanned PDF has no text</h2>
+      <p>Scans are pictures of letters. Use <em>Make searchable</em> to read them with on-device OCR (English) first; then Find, PDF to text and PDF to Word can use the text.</p>
+
+      <h2>Word to PDF shows the wrong font</h2>
+      <p>Calibri, Cambria, Arial, Times New Roman and Courier New are matched exactly; other fonts are swapped for the closest of these. Old <code>.doc</code> files need saving as <code>.docx</code> first.</p>
+
+      <footer><a href="./">HackerPDF</a> · <a href="./privacy.html">Privacy policy</a></footer>
+    </main>
+  </body>
+</html>
