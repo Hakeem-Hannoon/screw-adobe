@@ -22,6 +22,10 @@
   --fs-md: 14px;
   --fs-lg: 18px;
   --radius: 8px;
+  /* Notch / Dynamic Island / home bar. Zero in a normal browser tab; real in
+     the iOS app and in "Add to Home Screen". */
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
   color-scheme: light;
 }
 
@@ -208,7 +212,7 @@ button {
   min-height: 100%;
   display: grid;
   place-items: center;
-  padding: 48px 24px 12vh;
+  padding: calc(48px + var(--safe-top)) 24px calc(12vh + var(--safe-bottom));
 }
 
 .home-inner {
@@ -330,8 +334,8 @@ button {
 
 .hub-back {
   position: absolute;
-  top: 14px;
-  left: 14px;
+  top: calc(14px + var(--safe-top));
+  left: max(14px, env(safe-area-inset-left));
   width: 40px;
   height: 40px;
 }
@@ -376,8 +380,8 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  min-height: 56px;
-  padding: 10px 14px;
+  min-height: calc(56px + var(--safe-top));
+  padding: calc(10px + var(--safe-top)) 14px 10px;
   padding-left: max(14px, env(safe-area-inset-left));
   padding-right: max(14px, env(safe-area-inset-right));
   background: var(--chrome);
@@ -1383,7 +1387,7 @@ button {
 .toasts {
   position: fixed;
   left: 50%;
-  bottom: max(20px, env(safe-area-inset-bottom));
+  bottom: max(20px, var(--safe-bottom));
   transform: translateX(-50%);
   z-index: 60;
   display: flex;
@@ -2799,4 +2803,22 @@ button {
 
 .doc-text-page.md img {
   max-width: 100%;
+}
+
+/* ------------------------------------------------------------ iOS app */
+
+/* Inside the app there's no browser chrome below the page, so keep the last
+   row of every tool clear of the home bar. */
+html.native .editor,
+html.native .workspace {
+  padding-bottom: var(--safe-bottom);
+}
+
+/* No text selection callouts or tap flashes on buttons, like a native app. */
+html.native button,
+html.native .tool-link {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
 }
