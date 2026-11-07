@@ -41,7 +41,7 @@ app.innerHTML = `
     <nav class="tools" aria-label="Tools">
       <button type="button" class="tool-link primary" id="choose">${icons.box}<span>Redact</span></button>
       <button type="button" class="tool-link" id="go-sign">${icons.pen}<span>Sign</span></button>
-      <button type="button" class="tool-link" id="go-convert" title="Convert between PDF and Word, images or text">${icons.convert}<span>PDF &lt;-&gt; ?</span></button>
+      <button type="button" class="tool-link" id="go-convert" title="Convert between PDF and Word, images or text">${icons.convert}<span>PDF ↔ ?</span></button>
       <button type="button" class="tool-link" id="go-merge">${icons.merge}<span>Merge</span></button>
       <button type="button" class="tool-link" id="go-split">${icons.scissors}<span>Split</span></button>
       <button type="button" class="tool-link" id="go-organize">${icons.grid}<span>Organize pages</span></button>
