@@ -41,10 +41,11 @@ export class ToPdfTool {
   constructor(
     container: HTMLElement,
     private host: ToolHost,
+    private inputKind: "word" | "text" = "word",
   ) {
     this.root = document.createElement("div");
     this.root.className = "workspace";
-    this.root.id = "topdf-tool";
+    this.root.id = inputKind === "text" ? "textpdf-tool" : "topdf-tool";
     this.root.hidden = true;
     this.root.innerHTML = `
       <header class="toolbar">
@@ -71,7 +72,7 @@ export class ToPdfTool {
       </div>
       <div class="scroller" data-scroller>
         <div class="tool-body wide">
-          <h1 class="tool-title">Word to PDF</h1>
+          <h1 class="tool-title">${this.title}</h1>
           <p class="tool-sub" data-sub></p>
           <ol class="file-list" data-list aria-label="Files to turn into PDFs"></ol>
           <button type="button" class="drop-card" data-add>
@@ -89,6 +90,8 @@ export class ToPdfTool {
     this.list = q<HTMLOListElement>("[data-list]");
     this.scroller = q("[data-scroller]");
     this.input = q<HTMLInputElement>("input[type=file]");
+    if (inputKind === "text")
+      this.input.accept = ".txt,.text,.log,.csv,.md,.markdown,.mdown,.mkd,text/plain,text/markdown,text/csv";
     this.goBtn = q<HTMLButtonElement>("[data-go]");
     this.addBtn = q<HTMLButtonElement>("[data-add]");
     this.combine = q<HTMLInputElement>("[data-combine]");
@@ -128,7 +131,7 @@ export class ToPdfTool {
 
   open(): void {
     this.active = true;
-    document.title = "Word to PDF - HackerPDF";
+    document.title = `${this.title} - HackerPDF`;
     this.sync();
   }
 
@@ -157,7 +160,7 @@ export class ToPdfTool {
     const rejected: File[] = [];
     for (const file of files) {
       const kind = documentKind(file);
-      if (!kind) {
+      if (!kind || (this.inputKind === "text" && kind === "docx")) {
         rejected.push(file);
         continue;
       }
@@ -194,7 +197,7 @@ export class ToPdfTool {
         rejected.length === 1
           ? `${rejected[0].name} can't be turned into a PDF here.`
           : `Skipped ${plural(rejected.length, "file")}.`,
-        unsupportedReason(rejected[0]),
+        this.inputKind === "text" ? "Choose a text (.txt) or Markdown (.md) file." : unsupportedReason(rejected[0]),
       );
     }
     await this.queue;
@@ -224,6 +227,10 @@ export class ToPdfTool {
   }
 
   // ------------------------------------------------------------- internals
+
+  private get title(): string {
+    return this.inputKind === "text" ? "Text to PDF" : "Word to PDF";
+  }
 
   private ready(): Entry[] {
     return this.entries.filter((e) => e.bytes && e.src);
@@ -361,12 +368,18 @@ export class ToPdfTool {
     const n = this.entries.length;
     const ready = this.ready().length;
     const q = (sel: string) => this.root.querySelector<HTMLElement>(sel)!;
-    q("[data-summary]").textContent = n === 0 ? "Word to PDF" : n === 1 ? this.entries[0].file.name : plural(n, "file");
+    q("[data-summary]").textContent = n === 0 ? this.title : n === 1 ? this.entries[0].file.name : plural(n, "file");
     q("[data-sub]").textContent =
       n === 0
-        ? "Turn Word documents into PDFs, one or a whole batch. Markdown and text files work too."
-        : "Laid out as in Word, with text you can select and search. Keep going in another tool, or download.";
-    q("[data-add-label]").textContent = n ? "Add more files" : "Choose Word files";
+        ? this.inputKind === "text"
+          ? "Turn text or Markdown files into PDFs, one or a whole batch."
+          : "Turn Word documents into PDFs, one or a whole batch. Markdown and text files work too."
+        : this.inputKind === "text"
+          ? "Text you can select and search. Choose a page size, keep going in another tool, or download."
+          : "Laid out as in Word, with text you can select and search. Keep going in another tool, or download.";
+    q("[data-add-label]").textContent = n
+      ? "Add more files"
+      : this.inputKind === "text" ? "Choose text files" : "Choose Word files";
     q("[data-opts]").hidden = n === 0;
     q("[data-combine-opt]").hidden = n < 2;
     q("[data-paper-opt]").hidden = !this.entries.some((e) => e.kind !== "docx");
@@ -386,3 +399,4 @@ export class ToPdfTool {
 
 const pdfName = (name: string) =>
   `${name.replace(/\.(docx|docm|dotx|md|markdown|mdown|mkd|txt|text|log|csv)$/i, "").trim() || "document"}.pdf`;
+

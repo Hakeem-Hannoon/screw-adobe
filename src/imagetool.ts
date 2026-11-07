@@ -3,7 +3,9 @@ import { icons } from "./icons";
 import { imageBaseName, imagesToPdf, isImage, loadImage, type LoadedImage, type Paper } from "./images";
 import type { ToolHost } from "./merge";
 import { makeSortable } from "./reorder";
+import { uniqueNames } from "./rows";
 import { saveFile, showBusy, toast } from "./ui";
+import { zip } from "./zip";
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
@@ -19,6 +21,7 @@ export class ImageTool {
   private goBtn: HTMLButtonElement;
   private addBtn: HTMLButtonElement;
   private margin: HTMLInputElement;
+  private combine: HTMLInputElement;
   private loading: Promise<void> = Promise.resolve();
   private active = false;
 
@@ -33,10 +36,13 @@ export class ImageTool {
           <button type="button" class="mini-mark" data-home title="Back to start">
             <span>Hacker</span><span class="mini-bar"></span>
           </button>
-          <span class="filename" data-summary></span>
+          <label class="check inline" title="Turn off to create a separate PDF for each image">
+            <input type="checkbox" data-combine checked />
+            <span><strong>Merge into one file</strong></span>
+          </label>
         </div>
         <div class="tb-group tb-right" data-actions>
-          <button type="button" class="btn primary" data-go title="Download (Ctrl S)">${icons.download}<span>Download<span class="lbl"> PDF</span></span></button>
+          <button type="button" class="btn primary" data-go title="Download (Ctrl S)">${icons.download}<span>Download<span class="lbl" data-go-label> PDF</span></span></button>
         </div>
       </header>
       <div class="findbar optbar" data-opts hidden>
@@ -73,13 +79,19 @@ export class ImageTool {
     this.goBtn = q<HTMLButtonElement>("[data-go]");
     this.addBtn = q<HTMLButtonElement>("[data-add]");
     this.margin = q<HTMLInputElement>("[data-margin]");
+    this.combine = q<HTMLInputElement>("[data-combine]");
 
     q("[data-actions]").prepend(
-      handoffButton({ label: "Continue with", count: () => 1, pick: (t) => void this.handoff(t) }),
+      handoffButton({
+        label: "Continue with",
+        count: () => this.combine.checked ? 1 : this.images.length,
+        pick: (t) => void this.handoff(t),
+      }),
     );
     q("[data-home]").addEventListener("click", () => this.host.goHome());
     this.addBtn.addEventListener("click", () => this.pick());
     this.goBtn.addEventListener("click", () => void this.download());
+    this.combine.addEventListener("change", () => this.sync());
     this.root.querySelectorAll<HTMLButtonElement>("[data-paper]").forEach((b) =>
       b.addEventListener("click", () => {
         this.paper = b.dataset.paper as Paper;
@@ -106,6 +118,7 @@ export class ImageTool {
     for (const url of this.urls.values()) URL.revokeObjectURL(url);
     this.urls.clear();
     this.list.replaceChildren();
+    this.combine.checked = true;
     this.sync();
   }
 
@@ -155,15 +168,18 @@ export class ImageTool {
 
   async download(): Promise<void> {
     if (!this.images.length) return;
-    const images = [...this.images];
-    const name = `${imageBaseName(images[0].file.name)}.pdf`;
-    showBusy("Making your PDF");
     try {
-      const bytes = await imagesToPdf(images, { paper: this.paper, margin: this.margin.checked }, (done, total) =>
-        showBusy(`Adding image ${done} of ${total}`),
-      );
-      saveFile(new Blob([bytes as BlobPart], { type: "application/pdf" }), name);
-      toast(`Downloaded ${name}`, `${plural(images.length, "page")}. Photo metadata like location removed.`);
+      const files = await this.buildFiles();
+      if (files.length === 1) {
+        saveFile(files[0], files[0].name);
+        toast(`Downloaded ${files[0].name}`, `${plural(this.images.length, "page")}. Photo metadata like location removed.`);
+      } else {
+        const entries = await Promise.all(
+          files.map(async (file) => ({ name: file.name, data: new Uint8Array(await file.arrayBuffer()) })),
+        );
+        saveFile(zip(entries), "PDFs.zip");
+        toast("Downloaded PDFs.zip", `${plural(files.length, "PDF")}, one per image. Photo metadata like location removed.`);
+      }
     } catch (err) {
       console.error(err);
       toast("The PDF couldn't be made.", "One of the images may be damaged. Try removing it and downloading again.");
@@ -172,18 +188,33 @@ export class ImageTool {
     }
   }
 
-  /** Make the PDF, then open it in another tool instead of downloading it. */
+  /** Build one merged PDF or one PDF per image, using the same settings for download and handoff. */
+  private async buildFiles(): Promise<File[]> {
+    const images = [...this.images];
+    const groups = this.combine.checked ? [images] : images.map((image) => [image]);
+    const names = uniqueNames(groups.map((group) => `${imageBaseName(group[0].file.name)}.pdf`));
+    const opts = { paper: this.paper, margin: this.margin.checked };
+    const files: File[] = [];
+    let completed = 0;
+    showBusy("Making your PDF");
+    for (const [i, group] of groups.entries()) {
+      const bytes = await imagesToPdf(group, opts, (done) =>
+        showBusy(`Adding image ${completed + done} of ${images.length}`),
+      );
+      completed += group.length;
+      files.push(new File([bytes as BlobPart], names[i], { type: "application/pdf" }));
+    }
+    return files;
+  }
+
+  /** Make the PDFs, then open them in another tool instead of downloading them. */
   private async handoff(target: HandoffTarget): Promise<void> {
     if (!this.images.length) return;
-    const images = [...this.images];
     showBusy("Making your PDF");
     try {
-      const bytes = await imagesToPdf(images, { paper: this.paper, margin: this.margin.checked }, (done, total) =>
-        showBusy(`Adding image ${done} of ${total}`),
-      );
+      const files = await this.buildFiles();
       showBusy(null);
-      const name = `${imageBaseName(images[0].file.name)}.pdf`;
-      this.host.openIn(target, [new File([bytes as BlobPart], name, { type: "application/pdf" })]);
+      this.host.openIn(target, files);
     } catch (err) {
       console.error(err);
       showBusy(null);
@@ -259,16 +290,20 @@ export class ImageTool {
   private sync(): void {
     const n = this.images.length;
     const q = (sel: string) => this.root.querySelector<HTMLElement>(sel)!;
-    q("[data-summary]").textContent = n ? plural(n, "image") : "Images to PDF";
     q("[data-sub]").textContent =
       n === 0
-        ? "Turn photos, scans or screenshots into one PDF, one image per page."
+        ? this.combine.checked
+          ? "Turn photos, scans or screenshots into one PDF, one image per page."
+          : "Turn photos, scans or screenshots into separate PDFs, one per image."
         : n === 1
           ? "Add more images, or download this one as a PDF."
-          : "Each image becomes a page, from top to bottom. Drag the handles to change the order.";
+          : this.combine.checked
+            ? "Each image becomes a page, from top to bottom. Drag the handles to change the order."
+            : "Each image becomes a separate PDF. Download them together in a ZIP file.";
     q("[data-add-label]").textContent = n ? "Add more images" : "Choose images";
     q("[data-opts]").hidden = n === 0;
-    q("[data-status]").textContent = n ? plural(n, "page") : "";
+    q("[data-status]").textContent = n ? plural(n, this.combine.checked ? "page" : "PDF") : "";
+    q("[data-go-label]").textContent = !this.combine.checked && n > 1 ? " all (.zip)" : " PDF";
     this.root.querySelectorAll<HTMLButtonElement>("[data-paper]").forEach((b) => {
       b.setAttribute("aria-checked", String(b.dataset.paper === this.paper));
     });
@@ -278,3 +313,4 @@ export class ImageTool {
     this.root.querySelector<HTMLElement>(".handoff")!.hidden = n === 0;
   }
 }
+

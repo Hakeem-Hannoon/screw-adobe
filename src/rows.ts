@@ -93,15 +93,23 @@ export function fileRow(opts: {
 
 /** "Report.pdf" twice in a ZIP would clash: the second becomes "Report (2).pdf". */
 export function uniqueNames(names: string[]): string[] {
-  const seen = new Map<string, number>();
+  const reserved = new Set(names.map((name) => name.toLowerCase()));
+  const seen = new Set<string>();
   return names.map((n) => {
     const key = n.toLowerCase();
-    const count = (seen.get(key) ?? 0) + 1;
-    seen.set(key, count);
-    if (count === 1) return n;
-    const dot = n.lastIndexOf(".");
-    return dot > 0 ? `${n.slice(0, dot)} (${count})${n.slice(dot)}` : `${n} (${count})`;
+    let candidate = n;
+    if (seen.has(key)) {
+      const dot = n.lastIndexOf(".");
+      const stem = dot > 0 ? n.slice(0, dot) : n;
+      const ext = dot > 0 ? n.slice(dot) : "";
+      let count = 2;
+      do candidate = `${stem} (${count++})${ext}`;
+      while (seen.has(candidate.toLowerCase()) || reserved.has(candidate.toLowerCase()));
+    }
+    seen.add(candidate.toLowerCase());
+    return candidate;
   });
 }
 
 export const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
+

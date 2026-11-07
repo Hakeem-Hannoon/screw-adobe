@@ -25,6 +25,7 @@ export class MergeTool {
   private addBtn: HTMLButtonElement;
   private thumbs: Thumbs;
   private loading: Promise<void> = Promise.resolve();
+  private pendingLoads = 0;
   private active = false;
 
   constructor(container: HTMLElement, private host: ToolHost) {
@@ -107,8 +108,14 @@ export class MergeTool {
   }
 
   add(files: File[]): Promise<void> {
-    // Queue behind any load in progress so files land in the order they came.
-    this.loading = this.loading.then(() => this.load(files));
+    // Snapshot the picker/drop order now, then append batches in the order added.
+    const picked = [...files];
+    this.pendingLoads += 1;
+    this.sync();
+    this.loading = this.loading.then(() => this.load(picked)).finally(() => {
+      this.pendingLoads -= 1;
+      this.sync();
+    });
     return this.loading;
   }
 
@@ -147,6 +154,7 @@ export class MergeTool {
   }
 
   async download(): Promise<void> {
+    await this.loading;
     if (this.files.length < 2) return;
     const files = [...this.files];
     const name = `${baseName(files[0].name)}-merged.pdf`;
@@ -169,6 +177,7 @@ export class MergeTool {
 
   /** Merge, then open the result in another tool instead of downloading it. */
   private async handoff(target: HandoffTarget): Promise<void> {
+    await this.loading;
     if (this.files.length < 2) return;
     const files = [...this.files];
     const pages = files.flatMap((src) => src.sizes.map((_, index) => ({ src, index })));
@@ -254,11 +263,14 @@ export class MergeTool {
         ? "Combine several PDFs into one file."
         : n === 1
           ? "Add at least one more PDF to merge with."
-          : "They'll be joined from top to bottom. Drag the handles to change the order.";
+          : "";
     q("[data-add-label]").textContent = n ? "Add more PDFs" : "Choose PDFs";
     this.addBtn.classList.toggle("lg", n === 0);
-    this.goBtn.disabled = n < 2;
-    this.goBtn.title = n < 2 ? "Add at least two PDFs" : "Download (Ctrl S)";
-    this.root.querySelector<HTMLElement>(".handoff")!.hidden = n < 2;
+    this.goBtn.disabled = n < 2 || this.pendingLoads > 0;
+    this.goBtn.title = this.pendingLoads > 0
+      ? "Wait for the selected PDFs to finish opening"
+      : n < 2 ? "Add at least two PDFs" : "Download (Ctrl S)";
+    this.root.querySelector<HTMLElement>(".handoff")!.hidden = n < 2 || this.pendingLoads > 0;
   }
 }
+

@@ -48,7 +48,7 @@ app.innerHTML = `
       <button type="button" class="tool-link" id="go-compress">${icons.compress}<span>Compress</span></button>
       <button type="button" class="tool-link" id="go-numbers">${icons.hash}<span>Page numbers</span></button>
       <button type="button" class="tool-link" id="go-compare">${icons.compare}<span>Compare</span></button>
-      <button type="button" class="tool-link" id="go-convert" title="PDF to Word, images or text, and Word or images to PDF">${icons.convert}<span>PDF to ?</span></button>
+      <button type="button" class="tool-link" id="go-convert" title="Convert between PDF and Word, images or text">${icons.convert}<span>PDF &lt;-&gt; ?</span></button>
       <button type="button" class="tool-link" id="go-ocr">${icons.scan}<span>Make searchable</span></button>
     </nav>
   </div>
@@ -68,6 +68,7 @@ app.innerHTML = `
     <h2 class="hub-group" id="hub-to">To PDF</h2>
     <nav class="tools" aria-labelledby="hub-to">
       <button type="button" class="tool-link" id="go-topdf">${icons.toPdf}<span>Word to PDF</span></button>
+      <button type="button" class="tool-link" id="go-textpdf">${icons.fileText}<span>Text to PDF</span></button>
       <button type="button" class="tool-link" id="go-images">${icons.image}<span>Images to PDF</span></button>
     </nav>
   </div>
@@ -218,6 +219,7 @@ type Mode =
   | "sign"
   | "word"
   | "topdf"
+  | "textpdf"
   | "pdfimages";
 type ToolMode = Exclude<Mode, "home" | "editor" | "convert">;
 let mode: Mode = "home";
@@ -238,14 +240,15 @@ const ocr = new OcrTool(app, host);
 const sign = new SignTool(app, host);
 const word = new WordTool(app, host);
 const topdf = new ToPdfTool(app, host);
+const textpdf = new ToPdfTool(app, host, "text");
 const pdfimages = new PdfImagesTool(app, host);
-const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare, ocr, sign, word, topdf, pdfimages } satisfies Record<
+const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare, ocr, sign, word, topdf, textpdf, pdfimages } satisfies Record<
   ToolMode,
   unknown
 >;
 /** Tools that take several files at once; the rest take one. */
-const MULTI = new Set<ToolMode>(["merge", "images", "compare", "word", "topdf", "pdfimages"]);
-const isMulti = (m: Mode): m is "merge" | "images" | "compare" | "word" | "topdf" | "pdfimages" => MULTI.has(m as ToolMode);
+const MULTI = new Set<ToolMode>(["merge", "images", "compare", "word", "topdf", "textpdf", "pdfimages"]);
+const isMulti = (m: Mode): m is "merge" | "images" | "compare" | "word" | "topdf" | "textpdf" | "pdfimages" => MULTI.has(m as ToolMode);
 
 // ----------------------------------------------------------------- helpers
 
@@ -613,6 +616,7 @@ $("#go-ocr").addEventListener("click", () => startTool("ocr"));
 $("#go-sign").addEventListener("click", () => startTool("sign"));
 $("#go-word").addEventListener("click", () => startTool("word"));
 $("#go-topdf").addEventListener("click", () => startTool("topdf"));
+$("#go-textpdf").addEventListener("click", () => startTool("textpdf"));
 $("#go-convert").addEventListener("click", () => setMode("convert"));
 $("#hub-back").addEventListener("click", () => setMode("home"));
 // A back arrow at the top left of every tool.
@@ -755,6 +759,7 @@ window.addEventListener("dragenter", (e) => {
     sign: "Drop a PDF to sign it",
     word: "Drop PDFs to turn them into Word documents",
     topdf: "Drop Word files to turn them into PDFs",
+    textpdf: "Drop text files to turn them into PDFs",
     convert: onlyImages
       ? `Drop to turn ${many ? "these images" : "this image"} into a PDF`
       : "Drop Word files or images to turn them into PDFs",
@@ -811,3 +816,4 @@ window.addEventListener("beforeunload", (e) => {
 window.addEventListener("resize", () => requestAnimationFrame(syncToolbar));
 
 syncToolbar();
+

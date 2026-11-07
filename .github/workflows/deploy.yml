@@ -6,7 +6,9 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write
+  contents: read
+  pages: write
+  id-token: write
 
 concurrency:
   group: pages
@@ -15,6 +17,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,12 +32,15 @@ jobs:
 
       - run: npm run build
 
-      - name: Publish dist/ to gh-pages
-        uses: peaceiris/actions-gh-pages@v4
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v6
+
+      - name: Upload site
+        uses: actions/upload-pages-artifact@v5
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
-          force_orphan: true
-          user_name: "github-actions[bot]"
-          user_email: "41898282+github-actions[bot]@users.noreply.github.com"
-          commit_message: "deploy: ${{ github.sha }}"
+          path: ./dist
+
+      - name: Deploy site
+        id: deployment
+        uses: actions/deploy-pages@v5
+
