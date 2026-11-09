@@ -2822,3 +2822,76 @@ html.native .tool-link {
   -webkit-tap-highlight-color: transparent;
   -webkit-touch-callout: none;
 }
+
+/* PDF to handwriting */
+
+.hw-font select {
+  height: 34px;
+  max-width: 220px;
+  padding: 0 28px 0 10px;
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  background: var(--surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14' fill='none' stroke='%23565c64' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
+    no-repeat right 8px center;
+  color: var(--text);
+  font-size: 17px;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+}
+
+.hw-font select:focus-visible {
+  outline: none;
+  border-color: var(--marquee);
+  box-shadow: 0 0 0 3px var(--marquee-soft);
+}
+
+.hw-font option,
+.hw-font optgroup {
+  font-size: 16px;
+}
+
+#hand-tool .swatches .sw {
+  border-radius: 999px;
+}
+
+.hw-result {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 96px;
+}
+
+.hw-result .notice {
+  width: min(760px, 100%);
+}
+
+.hw-missing {
+  display: block;
+}
+
+.hw-missing:not(:first-child) {
+  margin-top: 8px;
+}
+
+.hw-pages {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.hw-pages .thumb-sheet {
+  border-radius: 2px;
+  box-shadow: var(--paper-shadow);
+}
+
+@media (max-width: 520px) {
+  .hw-result {
+    padding: 16px 12px 96px;
+  }
+  .hw-font select {
+    max-width: 170px;
+  }
+}

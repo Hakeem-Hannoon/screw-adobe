@@ -24,6 +24,7 @@ import { SignTool } from "./signtool";
 import { WordTool } from "./wordtool";
 import { ToPdfTool } from "./topdftool";
 import { PdfImagesTool } from "./pdfimagestool";
+import { HandTool } from "./handtool";
 import { documentKind } from "./dockind";
 import type { HandoffTarget } from "./handoff";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
@@ -64,6 +65,7 @@ app.innerHTML = `
       <button type="button" class="tool-link" id="go-word">${icons.word}<span>PDF to Word</span></button>
       <button type="button" class="tool-link" id="go-pdfimages">${icons.images}<span>PDF to images</span></button>
       <button type="button" class="tool-link" id="go-text">${icons.fileText}<span>PDF to text</span></button>
+      <button type="button" class="tool-link" id="go-hand">${icons.handwriting}<span>PDF to handwriting</span></button>
     </nav>
     <h2 class="hub-group" id="hub-to">To PDF</h2>
     <nav class="tools" aria-labelledby="hub-to">
@@ -220,7 +222,8 @@ type Mode =
   | "word"
   | "topdf"
   | "textpdf"
-  | "pdfimages";
+  | "pdfimages"
+  | "hand";
 type ToolMode = Exclude<Mode, "home" | "editor" | "convert">;
 let mode: Mode = "home";
 /** Where the back arrow goes from the current tool: the start screen, or the Convert screen it was picked from. */
@@ -242,7 +245,8 @@ const word = new WordTool(app, host);
 const topdf = new ToPdfTool(app, host);
 const textpdf = new ToPdfTool(app, host, "text");
 const pdfimages = new PdfImagesTool(app, host);
-const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare, ocr, sign, word, topdf, textpdf, pdfimages } satisfies Record<
+const hand = new HandTool(app, host);
+const tools = { merge, split, text, images, numbers, rotate, organize, compress, compare, ocr, sign, word, topdf, textpdf, pdfimages, hand } satisfies Record<
   ToolMode,
   unknown
 >;
@@ -631,6 +635,7 @@ for (const root of [editor, ...Object.values(tools).map((t) => t.root)]) {
   root.querySelector(".toolbar .tb-file")?.prepend(back);
 }
 $("#go-pdfimages").addEventListener("click", () => startTool("pdfimages"));
+$("#go-hand").addEventListener("click", () => startTool("hand"));
 document.querySelectorAll<HTMLButtonElement>("[data-tool]").forEach((b) =>
   b.addEventListener("click", () => setTool(b.dataset.tool as Tool)),
 );
@@ -764,6 +769,7 @@ window.addEventListener("dragenter", (e) => {
       ? `Drop to turn ${many ? "these images" : "this image"} into a PDF`
       : "Drop Word files or images to turn them into PDFs",
     pdfimages: "Drop PDFs to turn their pages into images",
+    hand: "Drop a PDF to write it out by hand",
     editor: "Drop your PDF to open it",
     home: docs
       ? `Drop to turn ${many ? "these" : "this"} into ${many ? "PDFs" : "a PDF"}`
