@@ -2825,31 +2825,88 @@ html.native .tool-link {
 
 /* PDF to handwriting */
 
-.hw-font select {
+.hw-picker {
+  position: relative;
+}
+
+.hw-pick {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   height: 34px;
-  max-width: 220px;
-  padding: 0 28px 0 10px;
+  max-width: 240px;
+  padding: 0 8px 0 12px;
   border: 1px solid var(--rule);
   border-radius: var(--radius);
-  background: var(--surface)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' width='14' height='14' fill='none' stroke='%23565c64' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E")
-    no-repeat right 8px center;
+  background: var(--surface);
   color: var(--text);
-  font-size: 17px;
-  appearance: none;
-  -webkit-appearance: none;
   cursor: pointer;
 }
 
-.hw-font select:focus-visible {
+.hw-pick:hover {
+  border-color: var(--graphite);
+}
+
+.hw-pick:focus-visible {
   outline: none;
   border-color: var(--marquee);
   box-shadow: 0 0 0 3px var(--marquee-soft);
 }
 
-.hw-font option,
-.hw-font optgroup {
-  font-size: 16px;
+.hw-pick svg {
+  flex: none;
+  color: var(--graphite);
+}
+
+.hw-pick-name {
+  overflow: hidden;
+  font-size: 19px;
+  line-height: 1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.hw-fonts {
+  left: 0;
+  right: auto;
+  width: 290px;
+  max-height: min(460px, 65vh);
+  padding: 6px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  z-index: 30;
+}
+
+.hw-fonts .menu-head:not(:first-child) {
+  margin-top: 10px;
+}
+
+.hw-opt {
+  display: block;
+  width: 100%;
+  min-height: 40px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: var(--text);
+  font-size: 22px;
+  line-height: 1.25;
+  text-align: left;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: pointer;
+}
+
+.hw-opt:hover,
+.hw-opt:focus-visible {
+  outline: none;
+  background: var(--hover);
+}
+
+.hw-opt[aria-selected="true"] {
+  background: var(--marquee-soft);
 }
 
 #hand-tool .swatches .sw {
@@ -2891,7 +2948,7 @@ html.native .tool-link {
   .hw-result {
     padding: 16px 12px 96px;
   }
-  .hw-font select {
-    max-width: 170px;
+  .hw-pick {
+    max-width: 180px;
   }
 }
