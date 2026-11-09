@@ -1,14 +1,15 @@
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import { faceBytes } from "./docfonts";
-import { extractPages, type Line } from "./extract";
-import { handFontBytes } from "./handfonts";
+import { extractPages, type Line, type Run } from "./extract";
+import { HAND_STYLES, handFontBytes, type HandGroup } from "./handfonts";
 import { handoffButton } from "./handoff";
-import { handwrite, type HwBlock, type HwResult, type Paper } from "./handwriting";
+import { handwrite, type HwArt, type HwBlock, type HwResult, type HwRun, type Paper } from "./handwriting";
 import { icons } from "./icons";
 import type { ToolHost } from "./merge";
 import { ocrPage, ocrToLines } from "./ocr";
 import { openPdf, pageSizes } from "./pdf";
-import { INKS, STYLES, type Ink } from "./signature";
+import { ArtShelf, scanPage, tint, type Art } from "./scan";
+import { INKS, type Ink } from "./signature";
 import { closeSource, loadSource, type PdfSource } from "./source";
 import { joinPages, measure, pageBlocks, runningLines } from "./structure";
 import { Thumbs } from "./thumbs";
@@ -16,40 +17,89 @@ import { baseName, isPdf, saveFile, showBusy, toast } from "./ui";
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n.toLocaleString()} ${n === 1 ? one : many}`;
 
-/** Easy to read at body size, so it's the one to start with. */
-const DEFAULT_FONT = "Nothing You Could Do";
+/** Neat and easy to read, so it's the one to start with. */
+const DEFAULT_FONT = "Patrick Hand";
+
+type Size = "same" | "a4" | "letter";
+const SIZES: Record<Exclude<Size, "same">, { w: number; h: number }> = {
+  a4: { w: 595.28, h: 841.89 },
+  letter: { w: 612, h: 792 },
+};
+const GROUPS: Record<HandGroup, string> = { clear: "Clear", natural: "Natural", fancy: "Fancy", showpiece: "Showpiece" };
 
 /**
  * The document's text in reading order, as headings, paragraphs, list items
- * and tables. Running headers and footers are left out, and paragraphs split
- * by a page break are joined back up, since the handwritten pages break in
- * different places.
+ * and tables, with display equations and figures as blocks of their own.
+ * Running headers and footers are left out, and paragraphs split by a page
+ * break are joined back up, since the handwritten pages break elsewhere.
  */
-function documentBlocks(layouts: Line[][]): HwBlock[] {
+function documentBlocks(layouts: Line[][], arts: Map<string, Art>): HwBlock[] {
   const running = runningLines(layouts);
   const body = layouts.map((lines, i) => lines.filter((l) => !running.skip[i].has(l)));
   const stats = measure(body);
-  return joinPages(body.map((lines) => pageBlocks(lines, stats))).map((b): HwBlock => {
-    if (b.kind === "h") return { kind: "h", level: b.level, text: b.text };
-    if (b.kind === "li") return { kind: "li", number: b.number, runs: b.runs };
-    if (b.kind === "table") return { kind: "table", rows: b.rows };
-    return { kind: "p", runs: b.runs };
-  });
+  const own = (ch: string) => {
+    const a = arts.get(ch);
+    return a !== undefined && a.kind !== "inline";
+  };
+  const out: HwBlock[] = [];
+  /** Text with display equations and figures in it, split around them. */
+  const split = (runs: Run[], make: (runs: HwRun[], first: boolean) => HwBlock) => {
+    let cur: HwRun[] = [];
+    let first = true;
+    const flush = () => {
+      const text = cur.map((r) => r.text).join("");
+      if (text.trim()) {
+        // No stray spaces where an equation was lifted out.
+        cur[0] = { ...cur[0], text: cur[0].text.replace(/^\s+/, "") };
+        const last = cur.length - 1;
+        cur[last] = { ...cur[last], text: cur[last].text.replace(/\s+$/, "") };
+        out.push(make(cur, first));
+        first = false;
+      }
+      cur = [];
+    };
+    for (const run of runs) {
+      let text = "";
+      for (const ch of run.text) {
+        if (own(ch)) {
+          if (text) cur.push({ ...run, text });
+          text = "";
+          flush();
+          out.push({ kind: "art", id: ch });
+        } else text += ch;
+      }
+      if (text) cur.push({ ...run, text });
+    }
+    flush();
+  };
+  for (const b of joinPages(body.map((lines) => pageBlocks(lines, stats)))) {
+    if (b.kind === "h") split([{ text: b.text, bold: false, italic: false }], (runs) => ({ kind: "h", level: b.level, text: runs.map((r) => r.text).join("") }));
+    else if (b.kind === "li") split(b.runs, (runs, first) => (first ? { kind: "li", number: b.number, runs } : { kind: "p", runs }));
+    else if (b.kind === "table") out.push({ kind: "table", rows: b.rows });
+    else split(b.runs, (runs) => ({ kind: "p", runs }));
+  }
+  return out;
 }
 
 /**
- * PDF to handwriting: write a PDF's text out by hand, in one of the Sign
- * tool's handwriting fonts, on plain or lined paper. The result is a new PDF;
- * the preview is that PDF itself, so what's shown is what downloads.
+ * PDF to handwriting: write a PDF's text out by hand, in a handwriting font,
+ * on lined, squared, dotted or blank paper at the size you pick. Equations
+ * keep their look, redrawn in the pen's colour; figures are copied over as
+ * they are. The result is a new PDF; the preview is that PDF itself, so
+ * what's shown is what downloads.
  */
 export class HandTool {
   readonly root: HTMLElement;
   private src: PdfSource | null = null;
   private layouts: Line[][] = [];
   private blocks: HwBlock[] = [];
+  private shelf = new ArtShelf();
+  /** Equations in each ink, made once. */
+  private tinted = new Map<string, Promise<Uint8Array>>();
   private font = DEFAULT_FONT;
   private ink: Ink = "blue";
   private paper: Paper = "lined";
+  private size: Size = "same";
   private result: HwResult | null = null;
   /** The finished PDF, opened for the preview. */
   private shown: PDFDocumentProxy | null = null;
@@ -63,7 +113,8 @@ export class HandTool {
   private notice: HTMLElement;
   private status: HTMLElement;
   private goBtn: HTMLButtonElement;
-  private select: HTMLSelectElement;
+  private fontBtn: HTMLButtonElement;
+  private fontList: HTMLElement;
   private input: HTMLInputElement;
   private active = false;
 
@@ -71,7 +122,6 @@ export class HandTool {
     container: HTMLElement,
     private host: ToolHost,
   ) {
-    const groups = { showpiece: "Showpiece", natural: "Natural", fancy: "Fancy" } as const;
     this.root = document.createElement("div");
     this.root.className = "workspace";
     this.root.id = "hand-tool";
@@ -88,38 +138,51 @@ export class HandTool {
           <button type="button" class="btn primary" data-go title="Download (Ctrl S)">${icons.download}<span>Download<span class="lbl"> PDF</span></span></button>
         </div>
       </header>
-      <div class="findbar optbar" data-opts hidden>
-        <label class="every hw-font">
-          Font
-          <select data-font>
-            ${(Object.keys(groups) as (keyof typeof groups)[])
+      <div class="findbar optbar hw-opts" data-opts hidden>
+        <div class="hw-picker">
+          <button type="button" class="hw-pick" data-font-btn aria-haspopup="listbox" aria-expanded="false">
+            <span class="hw-pick-name" data-font-name></span>${icons.chevron}
+          </button>
+          <div class="menu hw-fonts" role="listbox" tabindex="-1" aria-label="Font" data-font-list hidden>
+            ${(Object.keys(GROUPS) as HandGroup[])
               .map(
                 (g) =>
-                  `<optgroup label="${groups[g]}">${STYLES.filter((s) => s.group === g)
-                    .map((s) => `<option value="${s.family}" style="font-family: '${s.family}'">${s.family}</option>`)
-                    .join("")}</optgroup>`,
+                  `<p class="menu-head" role="presentation">${GROUPS[g]}</p>` +
+                  HAND_STYLES.filter((s) => s.group === g)
+                    .map(
+                      (s) =>
+                        `<button type="button" role="option" class="hw-opt" data-family="${s.family}" style="font-family: '${s.family}'" aria-selected="false">${s.family}</button>`,
+                    )
+                    .join(""),
               )
               .join("")}
-          </select>
-        </label>
+          </div>
+        </div>
         <div class="seg swatches" role="radiogroup" aria-label="Ink">
           ${(Object.keys(INKS) as Ink[])
             .map(
               (k) =>
-                `<button type="button" role="radio" data-ink="${k}" title="${INKS[k].label} ink" aria-label="${INKS[k].label}"><i class="sw" style="background: rgb(${INKS[k].color.join(",")})"></i></button>`,
+                `<button type="button" role="radio" data-ink="${k}" title="${INKS[k].label} ink" aria-label="${INKS[k].label} ink"><i class="sw" style="background: rgb(${INKS[k].color.join(",")})"></i></button>`,
             )
             .join("")}
         </div>
         <div class="seg" role="radiogroup" aria-label="Paper">
           <button type="button" role="radio" data-paper="lined" title="Notebook paper with ruled lines">Lined</button>
-          <button type="button" role="radio" data-paper="plain">Plain</button>
+          <button type="button" role="radio" data-paper="grid" title="Squared paper">Grid</button>
+          <button type="button" role="radio" data-paper="dots" title="Dot grid">Dots</button>
+          <button type="button" role="radio" data-paper="blank" title="Plain white paper">Blank</button>
+        </div>
+        <div class="seg" role="radiogroup" aria-label="Page size">
+          <button type="button" role="radio" data-size="same" title="The same size as the original PDF's pages">Same size</button>
+          <button type="button" role="radio" data-size="a4">A4</button>
+          <button type="button" role="radio" data-size="letter">Letter</button>
         </div>
         <span class="find-count" data-status aria-live="polite"></span>
       </div>
       <div class="scroller" data-scroller>
         <div class="tool-body" data-empty>
           <h1 class="tool-title">PDF to handwriting</h1>
-          <p class="tool-sub">Write a PDF's text out by hand, in one of the signature fonts, on lined or plain paper. You get a new PDF. Pictures and the original layout aren't kept.</p>
+          <p class="tool-sub">Write a PDF out by hand as a new PDF: pick a handwriting, an ink, and lined, squared, dotted or blank paper. Equations keep their look in your ink, and figures come across as they are.</p>
           <button type="button" class="drop-card lg" data-pick>
             ${icons.handwriting}
             <span><strong>Choose a PDF</strong><small>or drop one anywhere on this page</small></span>
@@ -140,9 +203,9 @@ export class HandTool {
     this.notice = q("[data-notice]");
     this.status = q("[data-status]");
     this.goBtn = q<HTMLButtonElement>("[data-go]");
-    this.select = q<HTMLSelectElement>("[data-font]");
+    this.fontBtn = q<HTMLButtonElement>("[data-font-btn]");
+    this.fontList = q("[data-font-list]");
     this.input = q<HTMLInputElement>("input[type=file]");
-    this.select.value = this.font;
     const width = Math.min(760, window.innerWidth - 32);
     this.thumbs = new Thumbs(this.scroller, { w: width, h: width * 2 });
 
@@ -159,24 +222,17 @@ export class HandTool {
     q("[data-home]").addEventListener("click", () => this.host.goHome());
     q("[data-pick]").addEventListener("click", () => this.pick());
     this.goBtn.addEventListener("click", () => this.download());
-    this.select.addEventListener("change", () => {
-      this.font = this.select.value;
-      this.rebuild();
-    });
-    this.root.querySelectorAll<HTMLButtonElement>("[data-ink]").forEach((b) =>
-      b.addEventListener("click", () => {
-        if (this.ink === b.dataset.ink) return;
-        this.ink = b.dataset.ink as Ink;
-        this.rebuild();
-      }),
-    );
-    this.root.querySelectorAll<HTMLButtonElement>("[data-paper]").forEach((b) =>
-      b.addEventListener("click", () => {
-        if (this.paper === b.dataset.paper) return;
-        this.paper = b.dataset.paper as Paper;
-        this.rebuild();
-      }),
-    );
+    this.setupFontPicker();
+    const choose = <K extends "ink" | "paper" | "size">(attr: K, set: (v: string) => void) =>
+      this.root.querySelectorAll<HTMLButtonElement>(`[data-${attr}]`).forEach((b) =>
+        b.addEventListener("click", () => {
+          set(b.dataset[attr]!);
+          this.rebuild();
+        }),
+      );
+    choose("ink", (v) => (this.ink = v as Ink));
+    choose("paper", (v) => (this.paper = v as Paper));
+    choose("size", (v) => (this.size = v as Size));
     this.input.addEventListener("change", () => {
       const f = this.input.files?.[0];
       this.input.value = "";
@@ -192,6 +248,7 @@ export class HandTool {
 
   close(): void {
     this.active = false;
+    this.closeFonts(false);
     this.reset();
   }
 
@@ -217,11 +274,14 @@ export class HandTool {
       showBusy(null);
       return;
     }
+    const shelf = new ArtShelf();
     let layouts: Line[][];
     try {
       layouts = await extractPages(src.doc, {
         fonts: true,
         onProgress: (done, total) => showBusy(`Reading page ${done} of ${total}`),
+        // Equations and figures come out of the text here, kept as they look.
+        prepare: (page, items, nameOf, index) => scanPage(page, items, nameOf, index, shelf),
       });
     } catch (err) {
       console.error(err);
@@ -237,8 +297,9 @@ export class HandTool {
     }
     this.reset();
     this.src = src;
+    this.shelf = shelf;
     this.layouts = layouts;
-    this.blocks = documentBlocks(layouts);
+    this.blocks = documentBlocks(layouts, shelf.arts);
     document.title = `${src.name} by hand - HackerPDF`;
     this.sync();
     this.scroller.scrollTop = 0;
@@ -252,6 +313,60 @@ export class HandTool {
     if (!file || this.goBtn.disabled) return;
     saveFile(file, file.name);
     toast(`Downloaded ${file.name}`, `${plural(this.result!.pages, "page")} in ${this.font}.`);
+  }
+
+  // ------------------------------------------------------------- font picker
+
+  private setupFontPicker(): void {
+    const options = () => [...this.fontList.querySelectorAll<HTMLButtonElement>("[role=option]")];
+    this.fontBtn.addEventListener("click", () => (this.fontList.hidden ? this.openFonts() : this.closeFonts(true)));
+    this.fontBtn.addEventListener("keydown", (e) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        this.openFonts();
+      }
+    });
+    this.fontList.addEventListener("click", (e) => {
+      const opt = (e.target as HTMLElement).closest<HTMLButtonElement>("[role=option]");
+      if (!opt) return;
+      this.font = opt.dataset.family!;
+      this.closeFonts(true);
+      this.rebuild();
+    });
+    this.fontList.addEventListener("keydown", (e) => {
+      const list = options();
+      const at = list.indexOf(document.activeElement as HTMLButtonElement);
+      const go = (i: number) => {
+        e.preventDefault();
+        list[Math.max(0, Math.min(list.length - 1, i))]?.focus();
+      };
+      if (e.key === "ArrowDown") go(at + 1);
+      else if (e.key === "ArrowUp") go(at - 1);
+      else if (e.key === "Home") go(0);
+      else if (e.key === "End") go(list.length - 1);
+      else if (e.key === "Escape" || e.key === "Tab") {
+        if (e.key === "Escape") e.preventDefault();
+        this.closeFonts(e.key === "Escape");
+      }
+    });
+    document.addEventListener("pointerdown", (e) => {
+      if (!this.fontList.hidden && !(e.target as HTMLElement).closest(".hw-picker")) this.closeFonts(false);
+    });
+  }
+
+  private openFonts(): void {
+    this.fontList.hidden = false;
+    this.fontBtn.setAttribute("aria-expanded", "true");
+    const current = this.fontList.querySelector<HTMLButtonElement>(`[data-family="${this.font}"]`);
+    current?.focus();
+    current?.scrollIntoView({ block: "center" });
+  }
+
+  private closeFonts(refocus: boolean): void {
+    if (this.fontList.hidden) return;
+    this.fontList.hidden = true;
+    this.fontBtn.setAttribute("aria-expanded", "false");
+    if (refocus) this.fontBtn.focus();
   }
 
   // ------------------------------------------------------------- internals
@@ -270,6 +385,30 @@ export class HandTool {
     this.timer = window.setTimeout(() => void this.build(false), 120);
   }
 
+  /** The equations and figures in the form the writer takes, equations in the current ink. */
+  private async arts(): Promise<Map<string, HwArt>> {
+    const out = new Map<string, HwArt>();
+    const color = INKS[this.ink].color;
+    await Promise.all(
+      [...this.shelf.arts].map(async ([ch, a]) => {
+        const w = a.box[2] - a.box[0];
+        const h = a.box[3] - a.box[1];
+        if (a.kind === "figure") {
+          out.set(ch, { kind: "figure", page: a.page, pdfBox: a.pdfBox, png: a.png ?? new Uint8Array(), w, h });
+          return;
+        }
+        const key = `${this.ink}:${ch}`;
+        let png = this.tinted.get(key);
+        if (!png) {
+          png = tint(a, color);
+          this.tinted.set(key, png);
+        }
+        out.set(ch, { kind: a.kind, png: await png, w, h, base: a.base, size: a.size });
+      }),
+    );
+    return out;
+  }
+
   private async build(first: boolean): Promise<void> {
     const src = this.src;
     if (!src) return;
@@ -278,13 +417,19 @@ export class HandTool {
     this.sync();
     if (first) showBusy("Writing it out");
     try {
-      const [hand, fallback] = await Promise.all([
+      const [hand, fallback, arts] = await Promise.all([
         handFontBytes(this.font),
-        // A plain font for letters the handwriting lacks (Greek, Cyrillic, bullets). Optional.
+        // A plain font for letters the handwriting lacks (bullets, other alphabets). Optional.
         faceBytes({ family: "Carlito", bold: false, italic: false }).catch(() => undefined),
+        this.arts(),
       ]);
-      const page = src.sizes[0] ?? { w: 612, h: 792 };
-      const result = await handwrite(this.blocks, { hand, fallback }, { paper: this.paper, ink: INKS[this.ink].color, page });
+      const page = this.size === "same" ? (src.sizes[0] ?? SIZES.a4) : SIZES[this.size];
+      const result = await handwrite(
+        this.blocks,
+        { hand: hand.regular, bold: hand.bold, fallback },
+        { paper: this.paper, ink: INKS[this.ink].color, page },
+        { arts, source: src.bytes },
+      );
       if (run !== this.run || this.src !== src) return;
       const { doc } = await openPdf(result.bytes, async () => null);
       if (run !== this.run || this.src !== src) {
@@ -366,7 +511,7 @@ export class HandTool {
     } finally {
       showBusy(null);
     }
-    this.blocks = documentBlocks(this.layouts);
+    this.blocks = documentBlocks(this.layouts, this.shelf.arts);
     this.sync();
     if (this.blocks.length) await this.build(true);
     else this.renderNotice();
@@ -384,6 +529,8 @@ export class HandTool {
     this.src = null;
     this.layouts = [];
     this.blocks = [];
+    this.shelf = new ArtShelf();
+    this.tinted.clear();
     this.result = null;
     this.ocred = [];
     this.notice.hidden = true;
@@ -399,13 +546,20 @@ export class HandTool {
     const nameEl = q("[data-name]");
     nameEl.textContent = src ? src.name : "PDF to handwriting";
     nameEl.title = src?.name ?? "";
-    this.root.querySelectorAll<HTMLButtonElement>("[data-ink]").forEach((b) => {
-      b.setAttribute("aria-checked", String(b.dataset.ink === this.ink));
+    for (const attr of ["ink", "paper", "size"] as const) {
+      const value = this[attr];
+      this.root.querySelectorAll<HTMLButtonElement>(`[data-${attr}]`).forEach((b) => {
+        b.setAttribute("aria-checked", String(b.dataset[attr] === value));
+      });
+    }
+    // The font's name, written in the font.
+    const name = q("[data-font-name]");
+    name.textContent = this.font;
+    name.style.fontFamily = `'${this.font}', var(--font)`;
+    this.fontBtn.setAttribute("aria-label", `Font: ${this.font}`);
+    this.fontList.querySelectorAll<HTMLElement>("[role=option]").forEach((o) => {
+      o.setAttribute("aria-selected", String(o.dataset.family === this.font));
     });
-    this.root.querySelectorAll<HTMLButtonElement>("[data-paper]").forEach((b) => {
-      b.setAttribute("aria-checked", String(b.dataset.paper === this.paper));
-    });
-    this.select.style.fontFamily = `'${this.font}', var(--font)`;
     const ready = src !== null && this.result !== null && !this.writing;
     this.goBtn.disabled = !ready;
     this.goBtn.title = !src ? "Choose a PDF first" : !this.blocks.length ? "This PDF has no text to write out" : "Download (Ctrl S)";

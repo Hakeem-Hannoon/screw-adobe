@@ -1,4 +1,4 @@
-import type { PDFDocumentProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy, PDFPageProxy } from "pdfjs-dist";
 import type { TextItem, TextMarkedContent } from "pdfjs-dist/types/src/display/api";
 
 /** A stretch of a line in one font style. */
@@ -185,30 +185,47 @@ function tidy(text: string): string {
  */
 export async function extractPages(
   doc: PDFDocumentProxy,
-  opts: { fonts?: boolean; onProgress?: (done: number, total: number) => void } = {},
+  opts: {
+    fonts?: boolean;
+    onProgress?: (done: number, total: number) => void;
+    /**
+     * A look at each page's text items before they're laid out, to take
+     * some out or swap some in (the handwriting tool lifts equations and
+     * figures out this way). Gets the page, its items, a lookup from an
+     * item's font id to the font's real name, and the page's index.
+     */
+    prepare?: (
+      page: PDFPageProxy,
+      items: ReadonlyArray<TextItem | TextMarkedContent>,
+      nameOf: (fontId: string) => string,
+      index: number,
+    ) => Promise<ReadonlyArray<TextItem | TextMarkedContent>>;
+  } = {},
 ): Promise<Line[][]> {
   const pages: Line[][] = [];
   for (let i = 1; i <= doc.numPages; i++) {
     const page = await doc.getPage(i);
     const content = await page.getTextContent();
     let style = PLAIN;
-    if (opts.fonts && content.items.some((it) => "str" in it && it.str.trim())) {
+    const nameOf = (id: string) => fontName(page.commonObjs, id);
+    if ((opts.fonts || opts.prepare) && content.items.some((it) => "str" in it && it.str.trim())) {
       try {
         // Loads the page's fonts, so their real names can be looked up.
         await page.getOperatorList();
-        style = (name) => fontStyle(fontName(page.commonObjs, name));
+        style = (name) => fontStyle(nameOf(name));
       } catch {
         // No styles, then.
       }
     }
-    pages.push(layoutPage(content.items, style));
+    const items = opts.prepare ? await opts.prepare(page, content.items, nameOf, i - 1) : content.items;
+    pages.push(layoutPage(items, style));
     page.cleanup();
     opts.onProgress?.(i, doc.numPages);
   }
   return pages;
 }
 
-function fontName(objs: { has(id: string): boolean; get(id: string): unknown }, id: string): string {
+export function fontName(objs: { has(id: string): boolean; get(id: string): unknown }, id: string): string {
   try {
     if (!objs.has(id)) return "";
     const font = objs.get(id) as { name?: unknown } | null;
