@@ -2371,6 +2371,8 @@ button {
   .tb-file {
     flex: 1 1 auto;
     order: 1;
+    /* Let a long filename shorten before the buttons wrap. */
+    min-width: 0;
   }
   .tb-right {
     flex: 0 0 auto;
@@ -2598,6 +2600,16 @@ button {
 
 .handoff {
   position: relative;
+}
+
+/* The editor's toolbar is full: there, just the arrow until the label fits. */
+@media (max-width: 1439px) {
+  #editor .handoff .lbl {
+    display: none;
+  }
+  #editor .handoff .btn {
+    padding: 0 9px;
+  }
 }
 
 .handoff-menu {
