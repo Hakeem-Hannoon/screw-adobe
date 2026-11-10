@@ -26,7 +26,7 @@ import { ToPdfTool } from "./topdftool";
 import { PdfImagesTool } from "./pdfimagestool";
 import { HandTool } from "./handtool";
 import { documentKind } from "./dockind";
-import type { HandoffTarget } from "./handoff";
+import { handoffButton, type HandoffTarget } from "./handoff";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
 
 // ------------------------------------------------------------------ markup
@@ -586,6 +586,43 @@ async function download(): Promise<void> {
 }
 
 $("#download").addEventListener("click", () => void download());
+
+/** Apply the edits, then open the result in another tool (like Sign) instead of downloading it. */
+async function handoff(target: HandoffTarget): Promise<void> {
+  if (!current) return;
+  viewer?.finishEditing();
+  menu.hidden = true;
+  menuToggle.setAttribute("aria-expanded", "false");
+  const name = store.hasEdits ? outputName(current.name) : current.name;
+  showBusy("Preparing your PDF");
+  try {
+    const res = await exportPdf({
+      bytes: current.bytes,
+      doc: current.doc,
+      sizes: current.sizes,
+      state: store.snapshot(),
+      flattenAll: flattenAll.checked,
+      onProgress: (done, total) => showBusy(`Preparing page ${done} of ${total}`),
+    });
+    showBusy(null);
+    // The edits travel with the file, so leaving the editor loses nothing.
+    savedRevision = store.revision;
+    openIn(target, [new File([res.bytes as BlobPart], name, { type: "application/pdf" })]);
+  } catch (err) {
+    console.error(err);
+    showBusy(null);
+    toast("Your PDF couldn't be prepared.", "Try again, or turn on Flatten every page in the download options.");
+  }
+}
+
+$("#split").before(
+  handoffButton({
+    label: "Continue with",
+    count: () => 1,
+    exclude: ["editor"],
+    pick: (t) => void handoff(t),
+  }),
+);
 menuToggle.addEventListener("click", (e) => {
   e.stopPropagation();
   menu.hidden = !menu.hidden;
