@@ -1,3 +1,4 @@
+import { handoffButton, type HandoffTarget } from "./handoff";
 import { icons } from "./icons";
 import type { ToolHost } from "./merge";
 import {
@@ -56,6 +57,7 @@ export class SignTool {
   private nameInput: HTMLInputElement;
   private goBtn: HTMLButtonElement;
   private backBtn: HTMLButtonElement;
+  private handoffEl: HTMLElement;
   private input: HTMLInputElement;
   private width: number;
   /** Width the pages are drawn at right now. */
@@ -171,6 +173,14 @@ export class SignTool {
     this.backBtn = q<HTMLButtonElement>("[data-back]");
     this.input = q<HTMLInputElement>("input[type=file]");
     this.pageList = q<HTMLInputElement>("[data-page-list]");
+    // Sign, then keep editing the signed PDF in another tool: no download and upload in between.
+    this.handoffEl = handoffButton({
+      label: "Continue with",
+      count: () => 1,
+      exclude: ["sign"],
+      pick: (t) => void this.handoff(t),
+    });
+    this.goBtn.before(this.handoffEl);
     this.width = Math.min(760, window.innerWidth - 32);
     this.tile = this.width;
     this.thumbs = new Thumbs(this.scroller, { w: this.width, h: this.width * 2 });
@@ -319,6 +329,23 @@ export class SignTool {
     if (!keepSig) {
       void this.renderPreviews();
       this.nameInput.focus();
+    }
+  }
+
+  /** Sign, then open the signed PDF in another tool instead of downloading it. */
+  private async handoff(target: HandoffTarget): Promise<void> {
+    const src = this.src;
+    if (!src || !this.sig || !this.places.length) return;
+    showBusy("Signing");
+    try {
+      const bytes = await signPdf(src, this.sig, this.places);
+      showBusy(null);
+      const name = `${baseName(src.name)}-signed.pdf`;
+      this.host.openIn(target, [new File([bytes as BlobPart], name, { type: "application/pdf" })]);
+    } catch (err) {
+      console.error(err);
+      showBusy(null);
+      toast("The signed PDF couldn't be made.", "The file may be damaged. Try opening it again.");
     }
   }
 
@@ -802,6 +829,7 @@ export class SignTool {
       ? `${n === 1 ? "1 signature" : `${n} signatures`}${pagesSigned > 1 ? ` on ${pagesSigned} pages` : ""}`
       : "";
 
+    this.handoffEl.hidden = !placing || n === 0;
     if (placing) {
       this.goBtn.innerHTML = `${icons.download}<span>Download<span class="lbl"> PDF</span></span>`;
       this.goBtn.disabled = n === 0;
