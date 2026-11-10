@@ -2363,6 +2363,17 @@ button {
   }
 }
 
+/* Mid widths: the editor's right-hand buttons outgrow half the bar, so give them
+   their room and let the tools sit off-centre rather than run underneath. */
+@media (min-width: 861px) and (max-width: 1279px) {
+  #editor .tb-right {
+    flex: 0 0 auto;
+  }
+  #editor .tb-file {
+    min-width: 0;
+  }
+}
+
 @media (max-width: 860px) {
   .toolbar {
     flex-wrap: wrap;
