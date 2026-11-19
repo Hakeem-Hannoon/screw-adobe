@@ -4,6 +4,8 @@ Black out or white out anything in a PDF, then download a clean copy. Merge, spl
 
 **Live:** https://hakeem-hannoon.github.io/screw-adobe/
 
+**iPhone and iPad:** [Download HackerPDF on the App Store](https://apps.apple.com/app/hackerpdf/id6830978707)
+
 ## What it does
 
 - **Box tool:** drag to cover anything with a black or white box. Move, resize, or delete boxes after.

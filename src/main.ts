@@ -26,6 +26,7 @@ import { ToPdfTool } from "./topdftool";
 import { PdfImagesTool } from "./pdfimagestool";
 import { HandTool } from "./handtool";
 import { documentKind } from "./dockind";
+import { isNative } from "./native";
 import { handoffButton, type HandoffTarget } from "./handoff";
 import { uid, type Color, type PageSize, type Rect, type Tool } from "./types";
 
@@ -54,6 +55,9 @@ app.innerHTML = `
     </nav>
   </div>
   <input type="file" id="file-input" accept="application/pdf,.pdf" hidden />
+  ${isNative ? "" : `<footer class="home-footer">
+    <a href="https://apps.apple.com/app/hackerpdf/id6830978707" target="_blank" rel="noopener noreferrer">Download HackerPDF on the App Store</a>
+  </footer>`}
 </main>
 
 <main class="home convert-hub" id="convert-hub" hidden>
