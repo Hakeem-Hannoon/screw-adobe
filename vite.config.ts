@@ -35,6 +35,7 @@ export default defineConfig({
   plugins: [contentSecurityPolicy()],
   build: {
     target: "es2022",
-    chunkSizeWarningLimit: 2000,
+    // The HEIC decoder (libheif in WebAssembly) is a ~3.2 MB chunk, loaded only when a HEIC photo needs it.
+    chunkSizeWarningLimit: 3300,
   },
 });
