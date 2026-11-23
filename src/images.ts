@@ -1,4 +1,5 @@
 import { PDFDocument, type PDFImage } from "pdf-lib";
+import { heicToJpeg, isHeic } from "./heic";
 
 /** An image added to the Images to PDF list. Only its size is kept in memory; pixels are decoded again when building. */
 export interface LoadedImage {
@@ -23,7 +24,7 @@ const PAPER: Record<Exclude<Paper, "fit">, [number, number]> = {
 const MARGIN = 36; // half an inch
 const PX_TO_PT = 0.75; // "Fit image" treats pixels as 96 per inch
 
-const IMAGE_EXT = /\.(jpe?g|jfif|png|gif|webp|avif|bmp|svg|heic|heif|tiff?|ico)$/i;
+const IMAGE_EXT = /\.(jpe?g|jfif|png|gif|webp|avif|bmp|svg|heic|heif|hif|tiff?|ico)$/i;
 
 export function isImage(file: File): boolean {
   return file.type.startsWith("image/") || IMAGE_EXT.test(file.name);
@@ -36,9 +37,21 @@ export function imageBaseName(name: string): string {
 
 let counter = 0;
 
-/** Read an image's size. Rejects if the browser can't decode it (e.g. HEIC outside Safari). */
-export async function loadImage(file: File): Promise<LoadedImage> {
-  const img = await decode(file);
+/**
+ * Read an image's size. Rejects if it can't be decoded. HEIC photos the
+ * browser can't open itself are converted to JPEG here, and the JPEG is kept
+ * in place of the original, so the preview and the PDF both work.
+ */
+export async function loadImage(file: File, onConvert?: () => void): Promise<LoadedImage> {
+  let img: Decoded;
+  try {
+    img = await decode(file);
+  } catch (err) {
+    if (!(await isHeic(file))) throw err;
+    onConvert?.();
+    file = await heicToJpeg(file);
+    img = await decode(file);
+  }
   const w = img.width;
   const h = img.height;
   release(img);
