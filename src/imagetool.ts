@@ -68,7 +68,7 @@ export class ImageTool {
           </button>
         </div>
       </div>
-      <input type="file" accept="image/*,.heic,.heif" multiple hidden />
+      <input type="file" accept="image/*,.heic,.heif,.hif" multiple hidden />
     `;
     container.append(this.root);
 
@@ -141,7 +141,7 @@ export class ImageTool {
       if (!this.active) break;
       showBusy(`Reading ${file.name}`);
       try {
-        const image = await loadImage(file);
+        const image = await loadImage(file, () => showBusy(`Converting ${file.name}`));
         if (!this.active) break;
         this.images.push(image);
         this.list.append(this.row(image));
@@ -154,12 +154,9 @@ export class ImageTool {
     this.addBtn.scrollIntoView({ block: "nearest" });
 
     if (failed.length) {
-      const heic = failed.some((n) => /\.hei[cf]$/i.test(n));
       toast(
         failed.length === 1 ? `${failed[0]} couldn't be read.` : `${failed.length} images couldn't be read.`,
-        heic
-          ? "This browser can't open HEIC photos. Try Safari, or export them as JPEG first."
-          : "They may be damaged, or in a format this browser can't open.",
+        "They may be damaged, or in a format this browser can't open.",
       );
     } else if (skipped) {
       toast(`Skipped ${plural(skipped, "file")} that ${skipped === 1 ? "isn't an image" : "aren't images"}.`);

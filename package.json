@@ -52,6 +52,7 @@
     "@pdf-lib/fontkit": "^1.1.1",
     "@tesseract.js-data/eng": "^1.0.0",
     "docx-preview": "^0.4.1",
+    "heic-to": "^1.6.7",
     "jszip": "^3.10.2",
     "marked": "^18.1.3",
     "pdf-lib": "^1.17.1",
